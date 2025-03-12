@@ -1,0 +1,293 @@
+.policy-page {
+    background-color: #f8f9fa;
+    min-height: 100vh;
+  }
+  
+  .page-header {
+    background-color: #f8f9fa;
+    padding: 40px 0 20px;
+    text-align: center;
+  }
+  
+  .header-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .star-icon {
+    color: #ffba00;
+    font-size: 24px;
+    margin-bottom: 10px;
+  }
+  
+  .page-title {
+    color: #1a4297;
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 15px;
+  }
+  
+  .title-underline {
+    width: 80px;
+    height: 3px;
+    background-color: #1a4297;
+    margin-bottom: 20px;
+  }
+  
+  .policy-content {
+    padding: 40px 0 60px;
+  }
+  
+  .policy-section {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    padding: 30px;
+    margin-bottom: 30px;
+  }
+  
+  .policy-title {
+    color: #1a4297;
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 20px;
+  }
+  
+  .policy-description h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 30px;
+    margin-bottom: 15px;
+    color: #333;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+  }
+  
+  .policy-description h4 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    color: #444;
+  }
+  
+  .policy-description p {
+    font-size: 15px;
+    line-height: 1.6;
+    color: #555;
+    margin-bottom: 20px;
+    text-align: justify;
+  }
+  
+  .policy-list {
+    list-style-type: none;
+    padding-left: 0;
+    margin-bottom: 20px;
+  }
+  
+  .policy-list li {
+    position: relative;
+    padding-left: 25px;
+    margin-bottom: 12px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: #555;
+  }
+  
+  .policy-list li::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: #1a4297;
+    font-size: 18px;
+    line-height: 1;
+  }
+  
+  .policy-numbered-list {
+    padding-left: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .policy-numbered-list li {
+    margin-bottom: 12px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: #555;
+  }
+  
+  .refund-table {
+    margin: 20px 0;
+    overflow-x: auto;
+  }
+  
+  .refund-table table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #ddd;
+  }
+  
+  .refund-table th,
+  .refund-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border: 1px solid #ddd;
+  }
+  
+  .refund-table th {
+    background-color: #f0f4ff;
+    color: #333;
+    font-weight: 600;
+  }
+  
+  .refund-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+  
+  .refund-table td ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+  
+  .other-policies {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    padding: 30px;
+  }
+  
+  .other-policies h3 {
+    color: #1a4297;
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 20px;
+  }
+  
+  .policy-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  
+  .policy-link {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    text-decoration: none;
+    color: #333;
+    transition: all 0.3s ease;
+    width: calc(50% - 10px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .policy-link:hover {
+    background-color: #1a4297;
+    color: white;
+    transform: translateY(-2px);
+  }
+  
+  .policy-link i {
+    font-size: 20px;
+    margin-right: 15px;
+    color: #ffba00;
+  }
+  
+  .policy-link:hover i {
+    color: white;
+  }
+  
+  .policy-link span {
+    font-weight: 500;
+  }
+  
+  .important-notice {
+    background-color: #fff8e6;
+    border-left: 4px solid #ffba00;
+    padding: 15px;
+    margin: 20px 0;
+    border-radius: 0 4px 4px 0;
+  }
+  
+  .important-notice p {
+    margin: 0;
+    color: #333;
+  }
+  
+  .bank-logos,
+  .card-logos,
+  .ewallet-logos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin: 10px 0 20px;
+  }
+  
+  .bank-logos img,
+  .card-logos img,
+  .ewallet-logos img {
+    height: 30px;
+    object-fit: contain;
+  }
+  
+  .guide-image {
+    margin: 20px 0;
+    text-align: center;
+  }
+  
+  .guide-image img {
+    max-width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .policy-link.policy-link-inline {
+    display: inline;
+    padding: 0;
+    background-color: transparent;
+    color: #1a4297;
+    box-shadow: none;
+    width: auto;
+  }
+  
+  .policy-link.policy-link-inline:hover {
+    color: #0e2b6f;
+    background-color: transparent;
+    transform: none;
+    text-decoration: underline;
+  }
+  
+  @media (max-width: 992px) {
+    .policy-section,
+    .other-policies {
+      padding: 20px;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .policy-link {
+      width: 100%;
+    }
+    
+    .policy-title {
+      font-size: 20px;
+    }
+    
+    .policy-description h3 {
+      font-size: 17px;
+    }
+    
+    .policy-description h4 {
+      font-size: 15px;
+    }
+    
+    .refund-table {
+      font-size: 14px;
+    }
+    
+    .refund-table th,
+    .refund-table td {
+      padding: 8px 10px;
+    }
+  }
