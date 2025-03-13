@@ -1,0 +1,409 @@
+.stadium-detail-page {
+    background-color: #f8f9fa;
+    min-height: 100vh;
+  }
+  
+  .stadium-detail-container {
+    padding: 40px 0 60px;
+  }
+  
+  .breadcrumbs {
+    display: flex;
+    align-items: center;
+    margin-bottom: 30px;
+    font-size: 14px;
+  }
+  
+  .breadcrumbs a {
+    color: #1a4297;
+    text-decoration: none;
+  }
+  
+  .breadcrumbs a:hover {
+    text-decoration: underline;
+  }
+  
+  .separator {
+    margin: 0 10px;
+    color: #999;
+  }
+  
+  .breadcrumbs .current {
+    color: #666;
+    font-weight: 500;
+  }
+  
+  .stadium-detail-content {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+  }
+  
+  .stadium-images {
+    padding: 20px;
+  }
+  
+  .main-image {
+    position: relative;
+    height: 400px;
+    overflow: hidden;
+    border-radius: 8px;
+    margin-bottom: 15px;
+  }
+  
+  .main-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .stadium-type {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 5px 15px;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  
+  .thumbnail-images {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+  }
+  
+  .thumbnail {
+    width: 100px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: opacity 0.3s;
+  }
+  
+  .thumbnail:hover {
+    opacity: 0.8;
+  }
+  
+  .stadium-info-booking {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  
+  .stadium-info {
+    flex: 2;
+    min-width: 300px;
+    padding: 20px;
+    border-right: 1px solid #eee;
+  }
+  
+  .stadium-name {
+    font-size: 24px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 20px;
+  }
+  
+  .stadium-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 30px;
+  }
+  
+  .meta-item {
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    color: #666;
+  }
+  
+  .meta-item i {
+    margin-right: 8px;
+    color: #1a4297;
+    width: 20px;
+    text-align: center;
+  }
+  
+  .status {
+    font-weight: 500;
+  }
+  
+  .status.available {
+    color: #28a745;
+  }
+  
+  .status.booked {
+    color: #fd7e14;
+  }
+  
+  .status.maintenance {
+    color: #e74c3c;
+  }
+  
+  .stadium-description,
+  .stadium-location {
+    margin-bottom: 30px;
+  }
+  
+  .stadium-description h3,
+  .stadium-location h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 15px;
+  }
+  
+  .stadium-description p,
+  .stadium-location p {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #666;
+  }
+  
+  .map-placeholder {
+    width: 100%;
+    height: 200px;
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 15px;
+  }
+  
+  .map-placeholder img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  .booking-section {
+    flex: 1;
+    min-width: 300px;
+    padding: 20px;
+    background-color: #f9f9f9;
+  }
+  
+  .booking-section h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 20px;
+  }
+  
+  .booking-success,
+  .booking-error {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+  }
+  
+  .booking-success {
+    background-color: #e6f7ee;
+    color: #28a745;
+  }
+  
+  .booking-error {
+    background-color: #fee;
+    color: #e74c3c;
+  }
+  
+  .booking-success i,
+  .booking-error i {
+    font-size: 20px;
+    margin-right: 10px;
+  }
+  
+  .booking-form {
+    margin-top: 20px;
+  }
+  
+  .form-group {
+    margin-bottom: 20px;
+  }
+  
+  .form-group label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+  }
+  
+  .form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  
+  .time-slots {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+  }
+  
+  .time-slot {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 14px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s;
+  }
+  
+  .time-slot:hover:not(.unavailable) {
+    border-color: #1a4297;
+    background-color: #f0f4ff;
+  }
+  
+  .time-slot.selected {
+    border-color: #1a4297;
+    background-color: #1a4297;
+    color: white;
+  }
+  
+  .time-slot.unavailable {
+    background-color: #f9f9f9;
+    color: #999;
+    cursor: not-allowed;
+  }
+  
+  .unavailable-label {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background-color: #e74c3c;
+    color: white;
+    font-size: 10px;
+    padding: 3px 6px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+  
+  .booking-summary {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+  
+  .booking-summary h4 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #333;
+  }
+  
+  .summary-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+  
+  .summary-item.total {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+    font-weight: 600;
+    font-size: 16px;
+  }
+  
+  .booking-button {
+    width: 100%;
+    padding: 12px;
+    background-color: #1a4297;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .booking-button:hover:not(:disabled) {
+    background-color: #0e2b6f;
+  }
+  
+  .booking-button:disabled {
+    background-color: #b3c2e6;
+    cursor: not-allowed;
+  }
+  
+  .login-prompt {
+    text-align: center;
+    margin-top: 15px;
+    font-size: 14px;
+    color: #666;
+  }
+  
+  .login-prompt a {
+    color: #1a4297;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  
+  .login-prompt a:hover {
+    text-decoration: underline;
+  }
+  
+  .loading,
+  .error-message {
+    text-align: center;
+    padding: 40px;
+    font-size: 16px;
+  }
+  
+  .loading {
+    color: #666;
+  }
+  
+  .error-message {
+    color: #e74c3c;
+  }
+  
+  .back-button {
+    display: inline-flex;
+    align-items: center;
+    color: #1a4297;
+    text-decoration: none;
+    margin-top: 20px;
+    font-size: 14px;
+  }
+  
+  .back-button i {
+    margin-right: 8px;
+  }
+  
+  .back-button:hover {
+    text-decoration: underline;
+  }
+  
+  @media (max-width: 768px) {
+    .stadium-info-booking {
+      flex-direction: column;
+    }
+    
+    .stadium-info {
+      border-right: none;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .main-image {
+      height: 250px;
+    }
+    
+    .time-slots {
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+  }

@@ -1,95 +1,194 @@
 .navbar {
-    background-color: var(--primary-color);
-    padding: 15px 0;
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-  }
-  
-  .navbar-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .navbar-logo img {
-    height: 100px;
+  background-color: var(--primary-color);
+  padding: 15px 0;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.navbar-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.navbar-logo img {
+  height: 100px;
+  display: block;
+}
+
+.navbar-menu {
+  display: flex;
+  list-style: none;
+}
+
+.navbar-item {
+  margin: 0 10px;
+}
+
+.navbar-link {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  font-size: 14px;
+  padding: 8px 12px;
+  transition: all 0.3s;
+}
+
+.navbar-link:hover,
+.navbar-link.active {
+  color: #fff;
+}
+
+.navbar-actions {
+  display: flex;
+  align-items: center;
+}
+
+.navbar-action-button {
+  color: #fff;
+  background-color: transparent;
+  border: 1px solid #fff;
+  border-radius: 4px;
+  padding: 8px 15px;
+  margin-left: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.navbar-action-button:hover {
+  background-color: #fff;
+  color: var(--primary-color);
+}
+
+.navbar-search-icon {
+  color: #fff;
+  margin-left: 15px;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.navbar-menu-toggle {
+  display: none;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+/* User dropdown styles */
+.user-dropdown-container {
+  position: relative;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  color: #fff;
+  cursor: pointer;
+  padding: 8px 15px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  margin-left: 10px;
+}
+
+.user-name {
+  margin-right: 8px;
+  font-size: 14px;
+}
+
+.user-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  width: 200px;
+  margin-top: 10px;
+  z-index: 1001;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  color: #333;
+  text-decoration: none;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.dropdown-item:hover {
+  background-color: #f5f5f5;
+}
+
+.dropdown-item i {
+  margin-right: 10px;
+  width: 20px;
+  text-align: center;
+  color: var(--primary-color);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: #eee;
+  margin: 5px 0;
+}
+
+.dropdown-item.logout {
+  color: #e74c3c;
+  cursor: pointer;
+}
+
+.dropdown-item.logout i {
+  color: #e74c3c;
+}
+
+@media (max-width: 992px) {
+  .navbar-menu-toggle {
     display: block;
   }
-  
+
   .navbar-menu {
-    display: flex;
-    list-style: none;
-  }
-  
-  .navbar-item {
-    margin: 0 10px;
-  }
-  
-  .navbar-link {
-    color: rgba(255, 255, 255, 0.8);
-    text-decoration: none;
-    font-size: 14px;
-    padding: 8px 12px;
-    transition: all 0.3s;
-  }
-  
-  .navbar-link:hover,
-  .navbar-link.active {
-    color: #fff;
-  }
-  
-  .navbar-actions {
-    display: flex;
-    align-items: center;
-  }
-  
-  .navbar-action-link {
-    color: #fff;
-    text-decoration: none;
-    font-size: 14px;
-    padding: 6px 12px;
-    margin-left: 15px;
-  }
-  
-  .navbar-search-icon {
-    color: #fff;
-    margin-left: 15px;
-    cursor: pointer;
-  }
-  
-  .navbar-menu-toggle {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: var(--primary-color);
+    flex-direction: column;
+    padding: 20px;
     display: none;
-    color: #fff;
-    font-size: 24px;
-    cursor: pointer;
+  }
+
+  .navbar-menu.active {
+    display: flex;
+  }
+
+  .navbar-item {
+    margin: 10px 0;
+  }
+
+  .navbar-actions {
+    display: none;
   }
   
-  @media (max-width: 992px) {
-    .navbar-menu-toggle {
-      display: block;
-    }
-  
-    .navbar-menu {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      right: 0;
-      background-color: var(--primary-color);
-      flex-direction: column;
-      padding: 20px;
-      display: none;
-    }
-  
-    .navbar-menu.active {
-      display: flex;
-    }
-  
-    .navbar-item {
-      margin: 10px 0;
-    }
-  
-    .navbar-actions {
-      display: none;
-    }
+  .navbar-actions.active {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-top: 15px;
   }
+  
+  .navbar-action-button,
+  .user-info {
+    margin: 5px 0;
+    width: 100%;
+  }
+  
+  .user-dropdown {
+    position: static;
+    width: 100%;
+    box-shadow: none;
+    margin-top: 5px;
+  }
+}

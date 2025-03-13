@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import AuthContext from '../context/AuthContext';
 import LoginModal from '../Authentication/LoginModal';
 import RegisterModal from '../Authentication/RegisterModal';
 import SearchModal from '../pages/SearchModal';
 import '../components/Navbar.css';
 
 const Navbar = () => {
+  const { isAuthenticated, currentUser, logout } = useContext(AuthContext);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
   const location = useLocation();
 
   // Hàm điều khiển modal
@@ -41,6 +44,15 @@ const Navbar = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
+  const toggleUserDropdown = () => {
+    setShowUserDropdown(!showUserDropdown);
+  };
+
+  const handleLogout = () => {
+    logout();
+    setShowUserDropdown(false);
+  };
+
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
@@ -52,7 +64,6 @@ const Navbar = () => {
     if (location.pathname === path) {
       e.preventDefault();
       scrollToTop();
-    } else {
     }
   };
 
@@ -138,8 +149,34 @@ const Navbar = () => {
           </ul>
 
           <div className="navbar-actions">
-            <button className="navbar-action-button" onClick={openRegisterModal}>Đăng ký</button>
-            <button className="navbar-action-button" onClick={openLoginModal}>Đăng nhập</button>
+            {isAuthenticated ? (
+              <div className="user-dropdown-container">
+                <div className="user-info" onClick={toggleUserDropdown}>
+                  <span className="user-name">{currentUser?.firstname || 'User'}</span>
+                  <i className={`fas fa-chevron-${showUserDropdown ? 'up' : 'down'}`}></i>
+                </div>
+                
+                {showUserDropdown && (
+                  <div className="user-dropdown">
+                    <Link to="/profile" className="dropdown-item" onClick={() => setShowUserDropdown(false)}>
+                      <i className="fas fa-user"></i> Tài khoản
+                    </Link>
+                    <Link to="/bookings" className="dropdown-item" onClick={() => setShowUserDropdown(false)}>
+                      <i className="fas fa-calendar-alt"></i> Lịch đặt sân
+                    </Link>
+                    <div className="dropdown-divider"></div>
+                    <div className="dropdown-item logout" onClick={handleLogout}>
+                      <i className="fas fa-sign-out-alt"></i> Đăng xuất
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <button className="navbar-action-button" onClick={openRegisterModal}>Đăng ký</button>
+                <button className="navbar-action-button" onClick={openLoginModal}>Đăng nhập</button>
+              </>
+            )}
             <div className="navbar-search-icon" onClick={openSearchModal}>
               <i className="fas fa-search"></i>
             </div>

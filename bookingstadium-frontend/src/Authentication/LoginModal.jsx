@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useContext } from 'react';
+import AuthContext from '../context/AuthContext';
 import '../Authentication/AuthModals.css';
 
 const LoginModal = ({ isOpen, onClose, openRegisterModal }) => {
+  const { login } = useContext(AuthContext);
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -16,11 +19,25 @@ const LoginModal = ({ isOpen, onClose, openRegisterModal }) => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Login form submitted:', formData);
-    // Đây chỉ là FE nên không xử lý gì thêm
-    // Sau này sẽ gọi API đăng nhập ở đây
+    setLoading(true);
+    setError('');
+    
+    try {
+      const result = await login(formData.email, formData.password);
+      
+      if (result.success) {
+        onClose(); // Đóng modal nếu đăng nhập thành công
+      } else {
+        setError(result.error || 'Login failed. Please try again.');
+      }
+    } catch (error) {
+      setError('An unexpected error occurred. Please try again.');
+      console.error('Login error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSwitchToRegister = () => {
@@ -40,6 +57,8 @@ const LoginModal = ({ isOpen, onClose, openRegisterModal }) => {
           </button>
         </div>
         <div className="auth-modal-body">
+          {error && <div className="error-message">{error}</div>}
+          
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <input
@@ -69,7 +88,13 @@ const LoginModal = ({ isOpen, onClose, openRegisterModal }) => {
               <span>Quên mật khẩu</span>
             </div>
             
-            <button type="submit" className="auth-button">Đăng nhập</button>
+            <button 
+              type="submit" 
+              className="auth-button"
+              disabled={loading}
+            >
+              {loading ? 'Đang xử lý...' : 'Đăng nhập'}
+            </button>
           </form>
           
           <div className="social-login-section">

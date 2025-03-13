@@ -1,15 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Link } from 'react-router-dom';
+import AuthContext from '../context/AuthContext';
 import '../Authentication/AuthModals.css';
 
 const RegisterModal = ({ isOpen, onClose, openLoginModal }) => {
+  const { register } = useContext(AuthContext);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: '',
+    firstname: '',
+    lastname: '',
     phone: '',
-    fullName: ''
+    day_of_birth: '',
   });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -19,11 +25,44 @@ const RegisterModal = ({ isOpen, onClose, openLoginModal }) => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Register form submitted:', formData);
-    // Đây chỉ là FE nên không xử lý gì thêm
-    // Sau này sẽ gọi API đăng ký ở đây
+    
+    // Kiểm tra mật khẩu xác nhận
+    if (formData.password !== formData.confirmPassword) {
+      setError('Mật khẩu xác nhận không khớp.');
+      return;
+    }
+    
+    setLoading(true);
+    setError('');
+    
+    try {
+      // Chuẩn bị dữ liệu đúng format cho backend
+      const userData = {
+        email: formData.email,
+        firstname: formData.firstname,
+        lastname: formData.lastname,
+        password: formData.password,
+        phone: formData.phone,
+        day_of_birth: formData.day_of_birth ? new Date(formData.day_of_birth).toISOString().split('T')[0] : null,
+      };
+      
+      const result = await register(userData);
+      
+      if (result.success) {
+        // Đăng ký thành công, chuyển sang trang đăng nhập
+        onClose();
+        openLoginModal();
+      } else {
+        setError(result.error || 'Registration failed. Please try again.');
+      }
+    } catch (error) {
+      setError('An unexpected error occurred. Please try again.');
+      console.error('Registration error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSwitchToLogin = () => {
@@ -43,6 +82,8 @@ const RegisterModal = ({ isOpen, onClose, openLoginModal }) => {
           </button>
         </div>
         <div className="auth-modal-body">
+          {error && <div className="error-message">{error}</div>}
+          
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <input
@@ -50,6 +91,30 @@ const RegisterModal = ({ isOpen, onClose, openLoginModal }) => {
                 name="email"
                 placeholder="Email *"
                 value={formData.email}
+                onChange={handleChange}
+                className="form-control"
+                required
+              />
+            </div>
+            
+            <div className="form-group">
+              <input
+                type="text"
+                name="firstname"
+                placeholder="Họ *"
+                value={formData.firstname}
+                onChange={handleChange}
+                className="form-control"
+                required
+              />
+            </div>
+            
+            <div className="form-group">
+              <input
+                type="text"
+                name="lastname"
+                placeholder="Tên *"
+                value={formData.lastname}
                 onChange={handleChange}
                 className="form-control"
                 required
@@ -94,17 +159,22 @@ const RegisterModal = ({ isOpen, onClose, openLoginModal }) => {
             
             <div className="form-group">
               <input
-                type="text"
-                name="fullName"
-                placeholder="Họ & tên *"
-                value={formData.fullName}
+                type="date"
+                name="day_of_birth"
+                placeholder="Ngày sinh"
+                value={formData.day_of_birth}
                 onChange={handleChange}
                 className="form-control"
-                required
               />
             </div>
             
-            <button type="submit" className="auth-button">Đăng ký</button>
+            <button 
+              type="submit" 
+              className="auth-button"
+              disabled={loading}
+            >
+              {loading ? 'Đang xử lý...' : 'Đăng ký'}
+            </button>
           </form>
           
           <div className="terms-agreement">
