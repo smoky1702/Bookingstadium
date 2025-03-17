@@ -25,16 +25,19 @@ const LoginModal = ({ isOpen, onClose, openRegisterModal }) => {
     setError('');
     
     try {
+      // Gọi hàm login từ AuthContext
       const result = await login(formData.email, formData.password);
       
       if (result.success) {
-        onClose(); // Đóng modal nếu đăng nhập thành công
+        // Đóng modal nếu đăng nhập thành công
+        onClose();
       } else {
-        setError(result.error || 'Login failed. Please try again.');
+        // Hiển thị lỗi nếu đăng nhập thất bại
+        setError(result.error || 'Đăng nhập thất bại. Vui lòng thử lại.');
       }
     } catch (error) {
-      setError('An unexpected error occurred. Please try again.');
-      console.error('Login error:', error);
+      console.error('Lỗi đăng nhập:', error);
+      setError('Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -98,7 +101,7 @@ const LoginModal = ({ isOpen, onClose, openRegisterModal }) => {
           </form>
           
           <div className="social-login-section">
-            <p>Hay tiếp tục với</p>
+            <p>Hoặc tiếp tục với</p>
             <div className="social-buttons">
               <button className="social-button facebook">
                 <i className="fab fa-facebook-f"></i> Facebook

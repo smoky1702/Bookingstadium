@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 import '../pages/HomePage.css';
-
-// Import các components cần thiết
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 

@@ -18,7 +18,6 @@ public class Users {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String user_id;
 
-    @ManyToMany(fetch = FetchType.EAGER) // Một user có thể có nhiều roles
     @ManyToOne(fetch = FetchType.EAGER) // Một user chỉ có MỘT role
     @JoinColumn(name = "role_id", nullable = false) // Trỏ đến role_id của bảng Roles
     private Roles role;

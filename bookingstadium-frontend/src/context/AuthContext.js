@@ -25,28 +25,41 @@ export const AuthProvider = ({ children }) => {
       // Kiểm tra token có hợp lệ không
       const response = await authAPI.validateToken({ token });
       
-      if (response.data.result && response.data.result.valid) {
+      if (response.data && response.data.result && response.data.result.valid) {
         // Lấy thông tin người dùng từ token (lấy userId từ token)
         const userId = getUserIdFromToken(token);
         if (userId) {
           try {
             const userResponse = await userAPI.getCurrentUser(userId);
-            setCurrentUser(userResponse.data.result);
-            setIsAuthenticated(true);
+            if (userResponse.data && userResponse.data.result) {
+              setCurrentUser(userResponse.data.result);
+              setIsAuthenticated(true);
+            } else {
+              console.error("Không thể lấy thông tin người dùng từ phản hồi");
+              localStorage.removeItem('accessToken');
+              setIsAuthenticated(false);
+              setCurrentUser(null);
+            }
           } catch (error) {
-            console.error("Error fetching user data:", error);
+            console.error("Lỗi khi lấy dữ liệu người dùng:", error);
             localStorage.removeItem('accessToken');
             setIsAuthenticated(false);
             setCurrentUser(null);
           }
+        } else {
+          console.error("Không thể lấy userId từ token");
+          localStorage.removeItem('accessToken');
+          setIsAuthenticated(false);
+          setCurrentUser(null);
         }
       } else {
+        console.log("Token không hợp lệ hoặc đã hết hạn");
         localStorage.removeItem('accessToken');
         setIsAuthenticated(false);
         setCurrentUser(null);
       }
     } catch (error) {
-      console.error("Error checking authentication status:", error);
+      console.error("Lỗi kiểm tra trạng thái xác thực:", error);
       localStorage.removeItem('accessToken');
       setIsAuthenticated(false);
       setCurrentUser(null);
@@ -58,10 +71,14 @@ export const AuthProvider = ({ children }) => {
   // Hàm này parse JWT token để lấy userId
   const getUserIdFromToken = (token) => {
     try {
+      // Giải mã JWT payload (phần thứ hai của token sau dấu chấm)
       const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.sub; // Giả sử rằng subject (sub) trong JWT là userId
+      
+      // Lấy user_id từ claim "user_id" trong token
+      // Nếu không có, thử lấy từ claim "sub" (subject)
+      return payload.user_id || payload.sub;
     } catch (error) {
-      console.error("Error parsing token:", error);
+      console.error("Lỗi phân tích token:", error);
       return null;
     }
   };
@@ -87,11 +104,28 @@ export const AuthProvider = ({ children }) => {
         
         return { success: true };
       } else {
-        throw new Error('Login failed: Invalid response');
+        throw new Error('Đăng nhập thất bại: phản hồi không hợp lệ');
       }
     } catch (error) {
-      setError(error.response?.data?.message || 'Failed to login. Please try again.');
-      return { success: false, error: error.response?.data?.message || 'Failed to login' };
+      let errorMessage = 'Đăng nhập thất bại. Vui lòng thử lại.';
+      
+      // Xử lý các loại lỗi khác nhau
+      if (error.response) {
+        // Nếu có phản hồi từ server
+        if (error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.status === 401) {
+          errorMessage = 'Email hoặc mật khẩu không chính xác';
+        } else if (error.response.status === 404) {
+          errorMessage = 'Không tìm thấy tài khoản với email này';
+        }
+      } else if (error.request) {
+        // Nếu request được gửi nhưng không nhận được phản hồi
+        errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.';
+      }
+      
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
@@ -105,13 +139,29 @@ export const AuthProvider = ({ children }) => {
       
       const response = await authAPI.register(userData);
       
-      return { success: true, data: response.data };
+      if (response.data && response.data.result) {
+        return { success: true, data: response.data };
+      } else {
+        throw new Error('Đăng ký thất bại: phản hồi không hợp lệ');
+      }
     } catch (error) {
-      setError(error.response?.data?.message || 'Registration failed. Please try again.');
-      return { 
-        success: false, 
-        error: error.response?.data?.message || 'Registration failed' 
-      };
+      let errorMessage = 'Đăng ký thất bại. Vui lòng thử lại.';
+      
+      // Xử lý các loại lỗi khác nhau
+      if (error.response) {
+        // Nếu có phản hồi từ server
+        if (error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.status === 409) {
+          errorMessage = 'Email đã tồn tại trong hệ thống';
+        }
+      } else if (error.request) {
+        // Nếu request được gửi nhưng không nhận được phản hồi
+        errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.';
+      }
+      
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }

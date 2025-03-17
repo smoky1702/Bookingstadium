@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import AuthContext from '../context/AuthContext';
-import { userAPI } from '../services/apiService';
+import { userAPI, bookingAPI } from '../services/apiService';
 import '../pages/UserProfilePage.css';
 
 const UserProfilePage = () => {
@@ -13,6 +13,7 @@ const UserProfilePage = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
+  // eslint-disable-next-line
   const [error, setError] = useState(null);
   
   // Form state for profile editing
@@ -28,7 +29,8 @@ const UserProfilePage = () => {
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [updateError, setUpdateError] = useState(null);
   
-  // Mock booking history data (this would come from API in a real app)
+  // Booking history state
+  // eslint-disable-next-line
   const [bookingHistory, setBookingHistory] = useState([
     {
       id: 'BK001',
@@ -56,6 +58,18 @@ const UserProfilePage = () => {
     }
   ]);
   
+  // Hàm xử lý định dạng ngày tháng
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Chưa cập nhật';
+    
+    try {
+      return new Date(dateString).toLocaleDateString();
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return dateString; // Trả về chuỗi gốc nếu không parse được
+    }
+  };
+  
   useEffect(() => {
     // Redirect if not authenticated
     if (!isAuthenticated) {
@@ -70,20 +84,36 @@ const UserProfilePage = () => {
         setLoading(true);
         setError(null);
         
+        console.log("Fetching user data for ID:", currentUser.user_id);
         const response = await userAPI.getCurrentUser(currentUser.user_id);
+        console.log("User data response:", response);
         
-        if (response.data && response.data.result) {
-          setUserData(response.data.result);
-          
-          // Initialize form data
-          setFormData({
-            firstname: response.data.result.firstname || '',
-            lastname: response.data.result.lastname || '',
-            phone: response.data.result.phone || '',
-            day_of_birth: response.data.result.day_of_birth || '',
-            password: '',
-            confirmPassword: ''
-          });
+        // Kiểm tra cấu trúc response từ API
+        if (response.data) {
+          // Nếu API trả về dữ liệu trong thuộc tính result
+          if (response.data.result) {
+            setUserData(response.data.result);
+            setFormData({
+              firstname: response.data.result.firstname || '',
+              lastname: response.data.result.lastname || '',
+              phone: response.data.result.phone || '',
+              day_of_birth: response.data.result.day_of_birth || '',
+              password: '',
+              confirmPassword: ''
+            });
+          } 
+          // Nếu API trả về dữ liệu trực tiếp trong data
+          else {
+            setUserData(response.data);
+            setFormData({
+              firstname: response.data.firstname || '',
+              lastname: response.data.lastname || '',
+              phone: response.data.phone || '',
+              day_of_birth: response.data.day_of_birth || '',
+              password: '',
+              confirmPassword: ''
+            });
+          }
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -93,7 +123,23 @@ const UserProfilePage = () => {
       }
     };
     
+    // Hàm lấy lịch sử đặt sân
+    const fetchBookingHistory = async () => {
+      try {
+        // Ví dụ: Gọi API để lấy lịch sử đặt sân
+        // const response = await bookingAPI.getUserBookings(currentUser.user_id);
+        // if (response.data && response.data.result) {
+        //   setBookingHistory(response.data.result);
+        // }
+        console.log("Would fetch booking history here");
+        // Hiện tại đang sử dụng mock data, sẽ thay bằng API thực khi cần
+      } catch (error) {
+        console.error('Error fetching booking history:', error);
+      }
+    };
+    
     fetchUserData();
+    fetchBookingHistory();
   }, [isAuthenticated, currentUser, navigate]);
   
   const handleTabChange = (tab) => {
@@ -149,10 +195,17 @@ const UserProfilePage = () => {
         updateData.password = formData.password;
       }
       
+      console.log("Sending update with data:", updateData);
       const response = await userAPI.updateUser(currentUser.user_id, updateData);
+      console.log("Update response:", response);
       
-      if (response.data && response.data.result) {
-        setUserData(response.data.result);
+      // Kiểm tra response từ API
+      if (response.data) {
+        if (response.data.result) {
+          setUserData(response.data.result);
+        } else {
+          setUserData(response.data);
+        }
         setUpdateSuccess(true);
         setEditMode(false);
       }
@@ -341,13 +394,13 @@ const UserProfilePage = () => {
                       <div className="info-group">
                         <div className="info-label">Ngày sinh</div>
                         <div className="info-value">
-                          {userData?.day_of_birth ? new Date(userData.day_of_birth).toLocaleDateString() : 'Chưa cập nhật'}
+                          {formatDate(userData?.day_of_birth)}
                         </div>
                       </div>
                       <div className="info-group">
                         <div className="info-label">Ngày tạo tài khoản</div>
                         <div className="info-value">
-                          {userData?.date_created ? new Date(userData.date_created).toLocaleDateString() : 'Không xác định'}
+                          {formatDate(userData?.date_created)}
                         </div>
                       </div>
                     </div>
@@ -397,7 +450,7 @@ const UserProfilePage = () => {
                               </div>
                               <div className="booking-detail">
                                 <i className="fas fa-calendar-day"></i>
-                                <span>{new Date(booking.date).toLocaleDateString()}</span>
+                                <span>{formatDate(booking.date)}</span>
                               </div>
                               <div className="booking-detail">
                                 <i className="fas fa-clock"></i>

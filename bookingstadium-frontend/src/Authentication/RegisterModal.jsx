@@ -7,10 +7,10 @@ const RegisterModal = ({ isOpen, onClose, openLoginModal }) => {
   const { register } = useContext(AuthContext);
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
-    confirmPassword: '',
     firstname: '',
     lastname: '',
+    password: '',
+    confirmPassword: '',
     phone: '',
     day_of_birth: '',
   });
@@ -34,32 +34,41 @@ const RegisterModal = ({ isOpen, onClose, openLoginModal }) => {
       return;
     }
     
+    // Kiểm tra mật khẩu có đủ 6 ký tự không
+    if (formData.password.length < 6) {
+      setError('Mật khẩu phải có ít nhất 6 ký tự.');
+      return;
+    }
+    
     setLoading(true);
     setError('');
     
     try {
-      // Chuẩn bị dữ liệu đúng format cho backend
+      // form cho backend
       const userData = {
         email: formData.email,
+        password: formData.password,
         firstname: formData.firstname,
         lastname: formData.lastname,
-        password: formData.password,
         phone: formData.phone,
-        day_of_birth: formData.day_of_birth ? new Date(formData.day_of_birth).toISOString().split('T')[0] : null,
+        day_of_birth: formData.day_of_birth ? formData.day_of_birth : null,
       };
       
+      // Gọi hàm register từ AuthContext
       const result = await register(userData);
       
       if (result.success) {
         // Đăng ký thành công, chuyển sang trang đăng nhập
         onClose();
         openLoginModal();
+        // Có thể thêm thông báo thành công ở đây
       } else {
-        setError(result.error || 'Registration failed. Please try again.');
+        // Hiển thị lỗi nếu đăng ký thất bại
+        setError(result.error || 'Đăng ký thất bại. Vui lòng thử lại.');
       }
     } catch (error) {
-      setError('An unexpected error occurred. Please try again.');
-      console.error('Registration error:', error);
+      console.error('Lỗi đăng ký:', error);
+      setError('Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -125,7 +134,7 @@ const RegisterModal = ({ isOpen, onClose, openLoginModal }) => {
               <input
                 type="password"
                 name="password"
-                placeholder="Mật khẩu *"
+                placeholder="Mật khẩu * (ít nhất 6 ký tự)"
                 value={formData.password}
                 onChange={handleChange}
                 className="form-control"
@@ -178,7 +187,7 @@ const RegisterModal = ({ isOpen, onClose, openLoginModal }) => {
           </form>
           
           <div className="terms-agreement">
-            Bằng việc đăng ký, bạn đã đồng ý với Datsan247 về{' '}
+            Bằng việc đăng ký, bạn đã đồng ý với Mi24/7 về{' '}
             <Link to="/dieu-khoan" onClick={onClose} className="terms-link">Điều khoản dịch vụ</Link> và{' '}
             <Link to="/chinh-sach" onClick={onClose} className="terms-link">Chính sách bảo mật</Link>
           </div>
