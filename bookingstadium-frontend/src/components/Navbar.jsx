@@ -15,6 +15,9 @@ const Navbar = () => {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const location = useLocation();
 
+  // Thêm console.log để debug
+  console.log("Auth state:", { isAuthenticated, currentUser });
+
   // Hàm điều khiển modal
   const openLoginModal = () => {
     setShowRegisterModal(false);
@@ -152,7 +155,7 @@ const Navbar = () => {
             {isAuthenticated ? (
               <div className="user-dropdown-container">
                 <div className="user-info" onClick={toggleUserDropdown}>
-                  <span className="user-name">{currentUser?.firstname || 'User'}</span>
+                  <span className="user-name">{currentUser?.firstname || currentUser?.email.split('@')[0] || 'User'}</span>
                   <i className={`fas fa-chevron-${showUserDropdown ? 'up' : 'down'}`}></i>
                 </div>
                 

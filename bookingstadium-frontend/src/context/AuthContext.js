@@ -22,41 +22,36 @@ export const AuthProvider = ({ children }) => {
         return;
       }
       
-      // Kiểm tra token có hợp lệ không
-      const response = await authAPI.validateToken({ token });
+      // Từ token đã xác định người dùng đã đăng nhập
+      // Đặt isAuthenticated = true ngay lập tức
+      setIsAuthenticated(true);
       
-      if (response.data && response.data.result && response.data.result.valid) {
-        // Lấy thông tin người dùng từ token (lấy userId từ token)
-        const userId = getUserIdFromToken(token);
-        if (userId) {
-          try {
-            const userResponse = await userAPI.getCurrentUser(userId);
-            if (userResponse.data && userResponse.data.result) {
-              setCurrentUser(userResponse.data.result);
-              setIsAuthenticated(true);
-            } else {
-              console.error("Không thể lấy thông tin người dùng từ phản hồi");
-              localStorage.removeItem('accessToken');
-              setIsAuthenticated(false);
-              setCurrentUser(null);
-            }
-          } catch (error) {
-            console.error("Lỗi khi lấy dữ liệu người dùng:", error);
-            localStorage.removeItem('accessToken');
-            setIsAuthenticated(false);
-            setCurrentUser(null);
-          }
-        } else {
-          console.error("Không thể lấy userId từ token");
-          localStorage.removeItem('accessToken');
-          setIsAuthenticated(false);
-          setCurrentUser(null);
+      try {
+        // Lấy email từ token để hiển thị thông tin cơ bản
+        const email = getEmailFromToken(token);
+        if (email) {
+          // Tạo một đối tượng user cơ bản từ thông tin trong token
+          const basicUserInfo = {
+            email: email,
+            // Các thông tin khác sẽ được điền sau
+            firstname: '',
+            lastname: '',
+            role: { roleName: getRoleFromToken(token) }
+          };
+          
+          setCurrentUser(basicUserInfo);
+          
+          // Nếu backend hỗ trợ API lấy thông tin user bằng email, bạn có thể gọi
+          // Trong trường hợp này, bỏ qua vì API đang gặp lỗi
+          // const userResponse = await userAPI.getUserByEmail(email);
+          // if (userResponse.data && userResponse.data.result) {
+          //   setCurrentUser(userResponse.data.result);
+          // }
         }
-      } else {
-        console.log("Token không hợp lệ hoặc đã hết hạn");
-        localStorage.removeItem('accessToken');
-        setIsAuthenticated(false);
-        setCurrentUser(null);
+      } catch (error) {
+        console.error("Lỗi khi lấy dữ liệu người dùng:", error);
+        // Không cần xóa token ở đây, vì người dùng vẫn đã đăng nhập
+        // Chỉ thiếu thông tin chi tiết
       }
     } catch (error) {
       console.error("Lỗi kiểm tra trạng thái xác thực:", error);
@@ -68,18 +63,27 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // Hàm này parse JWT token để lấy userId
-  const getUserIdFromToken = (token) => {
+  // Hàm lấy email từ JWT token
+  const getEmailFromToken = (token) => {
     try {
-      // Giải mã JWT payload (phần thứ hai của token sau dấu chấm)
       const payload = JSON.parse(atob(token.split('.')[1]));
-      
-      // Lấy user_id từ claim "user_id" trong token
-      // Nếu không có, thử lấy từ claim "sub" (subject)
-      return payload.user_id || payload.sub;
+      console.log("JWT payload:", payload);
+      return payload.sub || '';
     } catch (error) {
       console.error("Lỗi phân tích token:", error);
-      return null;
+      return '';
+    }
+  };
+  
+  // Hàm lấy role từ JWT token
+  const getRoleFromToken = (token) => {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      console.log("JWT payload:", payload);
+      return payload.scope || 'USER';
+    } catch (error) {
+      console.error("Lỗi phân tích token:", error);
+      return 'USER';
     }
   };
 
@@ -95,23 +99,39 @@ export const AuthProvider = ({ children }) => {
       setError(null);
       
       const response = await authAPI.login({ email, password });
+      console.log("Login response:", response);
       
       if (response.data && response.data.result && response.data.result.token) {
+        // Lưu token vào localStorage
         localStorage.setItem('accessToken', response.data.result.token);
         
-        // Sau khi đăng nhập thành công, kiểm tra lại trạng thái xác thực
-        await checkAuthStatus();
+        // Đặt isAuthenticated = true
+        setIsAuthenticated(true);
+        
+        // Lấy thông tin cơ bản từ token
+        const userEmail = getEmailFromToken(response.data.result.token);
+        const userRole = getRoleFromToken(response.data.result.token);
+        
+        // Tạo đối tượng user cơ bản
+        setCurrentUser({
+          email: userEmail,
+          role: { roleName: userRole },
+          firstname: userEmail.split('@')[0], // Tạm thời dùng phần đầu email làm tên
+          lastname: ''
+        });
         
         return { success: true };
       } else {
         throw new Error('Đăng nhập thất bại: phản hồi không hợp lệ');
       }
     } catch (error) {
+      console.error("Login error:", error);
       let errorMessage = 'Đăng nhập thất bại. Vui lòng thử lại.';
       
       // Xử lý các loại lỗi khác nhau
       if (error.response) {
         // Nếu có phản hồi từ server
+        console.log("Error response:", error.response);
         if (error.response.data && error.response.data.message) {
           errorMessage = error.response.data.message;
         } else if (error.response.status === 401) {

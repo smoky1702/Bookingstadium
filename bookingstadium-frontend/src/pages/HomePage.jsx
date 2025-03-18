@@ -66,10 +66,13 @@ const HomePage = () => {
                     onChange={handleSearchChange}
                     className="form-control"
                   >
-                    <option value="">Loại/thể loại sân</option>
-                    <option value="5">Sân 5 người</option>
-                    <option value="7">Sân 7 người</option>
-                    <option value="11">Sân 11 người</option>
+                    <option value="">Loại/Theo loại sân</option>
+                  <option value="bongda">Bóng đá</option>
+                  <option value="tennis">Tennis</option>
+                  <option value="golf">Golf</option>
+                  <option value="bongro">Bóng rổ</option>
+                  <option value="bongchuyen">Bóng chuyền</option>
+                  <option value="caulong">Cầu lông</option>
                   </select>
                 </div>
                 <div className="search-field">

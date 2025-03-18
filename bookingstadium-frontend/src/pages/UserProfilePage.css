@@ -55,13 +55,13 @@
   .user-name {
     font-size: 18px;
     font-weight: 600;
-    color: #333;
+    color: #fd7e14;
     margin-bottom: 5px;
   }
   
   .user-email {
     font-size: 14px;
-    color: #666;
+    color: #333;
   }
   
   .sidebar-menu {

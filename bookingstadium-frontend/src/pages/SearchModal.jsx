@@ -108,10 +108,13 @@ const SearchModal = ({ isOpen, onClose }) => {
                   onChange={handleChange}
                   className="form-control"
                 >
-                  <option value="">Loại theo loại sân</option>
-                  <option value="san5">Sân 5 người</option>
-                  <option value="san7">Sân 7 người</option>
-                  <option value="san11">Sân 11 người</option>
+                  <option value="">Loại/Theo loại sân</option>
+                  <option value="bongda">Bóng đá</option>
+                  <option value="tennis">Tennis</option>
+                  <option value="golf">Golf</option>
+                  <option value="bongro">Bóng rổ</option>
+                  <option value="bongchuyen">Bóng chuyền</option>
+                  <option value="caulong">Cầu lông</option>
                 </select>
               </div>
               

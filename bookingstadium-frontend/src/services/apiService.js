@@ -1,6 +1,5 @@
 import axios from 'axios';
 
-
 const API_URL = 'http://localhost:8080';
 
 const apiClient = axios.create({
@@ -48,15 +47,15 @@ const authAPI = {
   
   // Đăng ký 
   register: (userData) => apiClient.post('/users', userData),
-  
-  // Kiểm tra token
-  validateToken: (token) => apiClient.post('/auth/introspect', { token }),
 };
 
 // API cho người dùng
 const userAPI = {
-  // Lấy tt người dùng
+  // Lấy tt người dùng theo ID
   getCurrentUser: (userId) => apiClient.get(`/users/${userId}`),
+  
+  // Thêm API lấy người dùng theo email nếu backend hỗ trợ
+  getUserByEmail: (email) => apiClient.get(`/users/email/${email}`),
   
   // Cập nhật tt
   updateUser: (userId, userData) => apiClient.put(`/users/${userId}`, userData),
@@ -73,7 +72,7 @@ const stadiumAPI = {
   // Tạo sân bóng
   createStadium: (stadiumData) => apiClient.post('/stadium', stadiumData),
   
-  // Lấy danh sáchsân bóng
+  // Lấy danh sách sân bóng
   getStadiums: () => apiClient.get('/stadium'),
   
   // Lấy tt chi tiết sân bóng theo ID
