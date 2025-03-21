@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import AuthContext from '../context/AuthContext';
+import AdminPanel from '../Admin/AdminPanel';
 import { userAPI, bookingAPI } from '../services/apiService';
 import '../pages/UserProfilePage.css';
 
@@ -30,6 +31,9 @@ const UserProfilePage = () => {
   
   // Booking history state
   const [bookingHistory, setBookingHistory] = useState([]);
+  
+  // Kiểm tra xem người dùng có phải là admin hay không
+  const isAdmin = currentUser?.role?.roleName === 'ADMIN';
   
   // Hàm xử lý định dạng ngày tháng
   const formatDate = (dateString) => {
@@ -65,26 +69,25 @@ const UserProfilePage = () => {
       });
     }
     
-    // Sau này sẽ gọi API để lấy lịch sử đặt sân tại đây
-    // const fetchBookingHistory = async () => {
-    //   try {
-    //     setLoading(true);
-    //     const response = await bookingAPI.getUserBookings(currentUser.user_id);
-    //     if (response.data && response.data.result) {
-    //       setBookingHistory(response.data.result);
-    //     }
-    //   } catch (error) {
-    //     console.error('Error fetching booking history:', error);
-    //   } finally {
-    //     setLoading(false);
-    //   }
-    // };
-    
-    // if (currentUser?.user_id) {
-    //   fetchBookingHistory();
-    // }
-    
-  }, [isAuthenticated, currentUser, navigate]);
+    // Nếu không phải admin, lấy lịch sử đặt sân
+    if (!isAdmin && currentUser?.user_id) {
+      const fetchBookingHistory = async () => {
+        try {
+          setLoading(true);
+          const response = await bookingAPI.getUserBookings(currentUser.user_id);
+          if (response.data && response.data.result) {
+            setBookingHistory(response.data.result);
+          }
+        } catch (error) {
+          console.error('Lỗi khi lấy lịch sử đặt sân:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchBookingHistory();
+    }
+  }, [isAuthenticated, currentUser, navigate, isAdmin]);
   
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -126,9 +129,6 @@ const UserProfilePage = () => {
     
     try {
       setUpdateError(null);
-      
-      // Giả lập cập nhật thành công vì API có thể không hoạt động
-      // Trong thực tế, bạn sẽ gửi yêu cầu cập nhật đến backend
       
       // Cập nhật userData trong state
       const updatedUserData = {
@@ -187,13 +187,25 @@ const UserProfilePage = () => {
                   <i className="fas fa-user"></i>
                   <span>Thông tin cá nhân</span>
                 </button>
-                <button 
-                  className={`menu-item ${activeTab === 'bookings' ? 'active' : ''}`} 
-                  onClick={() => handleTabChange('bookings')}
-                >
-                  <i className="fas fa-calendar-alt"></i>
-                  <span>Lịch sử đặt sân</span>
-                </button>
+                
+                {isAdmin ? (
+                  <button 
+                    className={`menu-item ${activeTab === 'admin' ? 'active' : ''}`} 
+                    onClick={() => handleTabChange('admin')}
+                  >
+                    <i className="fas fa-cogs"></i>
+                    <span>Quản trị hệ thống</span>
+                  </button>
+                ) : (
+                  <button 
+                    className={`menu-item ${activeTab === 'bookings' ? 'active' : ''}`} 
+                    onClick={() => handleTabChange('bookings')}
+                  >
+                    <i className="fas fa-calendar-alt"></i>
+                    <span>Lịch sử đặt sân</span>
+                  </button>
+                )}
+                
                 <button className="menu-item logout" onClick={handleLogout}>
                   <i className="fas fa-sign-out-alt"></i>
                   <span>Đăng xuất</span>
@@ -343,7 +355,8 @@ const UserProfilePage = () => {
                       <div className="info-group">
                         <div className="info-label">Vai trò</div>
                         <div className="info-value">
-                          {userData?.role?.roleName || 'Người dùng'}
+                          {userData?.role?.roleName === 'ADMIN' ? 'Quản trị viên' : 
+                           userData?.role?.roleName === 'MANAGER' ? 'Quản lý sân' : 'Người dùng'}
                         </div>
                       </div>
                     </div>
@@ -351,7 +364,11 @@ const UserProfilePage = () => {
                 </div>
               )}
               
-              {activeTab === 'bookings' && (
+              {activeTab === 'admin' && isAdmin && (
+                <AdminPanel />
+              )}
+              
+              {activeTab === 'bookings' && !isAdmin && (
                 <div className="bookings-tab">
                   <div className="tab-header">
                     <h2>Lịch sử đặt sân</h2>
@@ -379,9 +396,9 @@ const UserProfilePage = () => {
                       
                       <div className="booking-list">
                         {bookingHistory.map(booking => (
-                          <div key={booking.id} className="booking-card">
+                          <div key={booking.bookingId} className="booking-card">
                             <div className="booking-header">
-                              <div className="booking-id">Mã đặt sân: #{booking.id}</div>
+                              <div className="booking-id">Mã đặt sân: #{booking.bookingId}</div>
                               <div className={`booking-status ${booking.status.toLowerCase()}`}>
                                 {booking.status === 'CONFIRMED' ? 'Đã xác nhận' :
                                  booking.status === 'PENDING' ? 'Đang chờ' :
@@ -391,30 +408,30 @@ const UserProfilePage = () => {
                             <div className="booking-body">
                               <div className="booking-detail">
                                 <i className="fas fa-futbol"></i>
-                                <span>{booking.stadiumName}</span>
+                                <span>{booking.stadiumName || 'Không có thông tin sân'}</span>
                               </div>
                               <div className="booking-detail">
                                 <i className="fas fa-calendar-day"></i>
-                                <span>{formatDate(booking.date)}</span>
+                                <span>{formatDate(booking.dateOfBooking)}</span>
                               </div>
                               <div className="booking-detail">
                                 <i className="fas fa-clock"></i>
-                                <span>{booking.time}</span>
+                                <span>{booking.startTime} - {booking.endTime}</span>
                               </div>
                               <div className="booking-detail">
                                 <i className="fas fa-tag"></i>
-                                <span>{booking.price.toLocaleString()} VNĐ</span>
+                                <span>{booking.price ? booking.price.toLocaleString() : '0'} VNĐ</span>
                               </div>
                             </div>
                             <div className="booking-actions">
-                              <Link to={`/booking/${booking.id}`} className="view-detail-button">
+                              <Link to={`/booking/${booking.bookingId}`} className="view-detail-button">
                                 Xem chi tiết
                               </Link>
-                              {booking.status === 'CONFIRMED' || booking.status === 'PENDING' ? (
+                              {(booking.status === 'CONFIRMED' || booking.status === 'PENDING') && (
                                 <button className="cancel-booking-button">
                                   Hủy đặt sân
                                 </button>
-                              ) : null}
+                              )}
                             </div>
                           </div>
                         ))}

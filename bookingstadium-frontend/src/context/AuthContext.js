@@ -30,23 +30,35 @@ export const AuthProvider = ({ children }) => {
         // Lấy email từ token để hiển thị thông tin cơ bản
         const email = getEmailFromToken(token);
         if (email) {
+          // Lấy role từ token
+          const role = getRoleFromToken(token);
+          
           // Tạo một đối tượng user cơ bản từ thông tin trong token
           const basicUserInfo = {
             email: email,
             // Các thông tin khác sẽ được điền sau
             firstname: '',
             lastname: '',
-            role: { roleName: getRoleFromToken(token) }
+            role: { roleName: role }
           };
           
           setCurrentUser(basicUserInfo);
           
           // Nếu backend hỗ trợ API lấy thông tin user bằng email, bạn có thể gọi
-          // Trong trường hợp này, bỏ qua vì API đang gặp lỗi
-          // const userResponse = await userAPI.getUserByEmail(email);
-          // if (userResponse.data && userResponse.data.result) {
-          //   setCurrentUser(userResponse.data.result);
-          // }
+          try {
+            const userResponse = await userAPI.getUserByEmail(email);
+            if (userResponse.data && userResponse.data.result) {
+              // Cập nhật thông tin người dùng với dữ liệu đầy đủ từ API
+              const fullUserInfo = {
+                ...userResponse.data.result,
+                role: { roleName: role } // Đảm bảo giữ lại thông tin vai trò từ token
+              };
+              setCurrentUser(fullUserInfo);
+            }
+          } catch (userError) {
+            console.error("Lỗi khi lấy thông tin chi tiết người dùng:", userError);
+            // Sử dụng thông tin cơ bản nếu không lấy được thông tin chi tiết
+          }
         }
       } catch (error) {
         console.error("Lỗi khi lấy dữ liệu người dùng:", error);
@@ -80,6 +92,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       console.log("JWT payload:", payload);
+      // Từ scope trả về, lấy ra role name
+      // Giả sử scope trả về là "ADMIN", "USER", hoặc "MANAGER"
       return payload.scope || 'USER';
     } catch (error) {
       console.error("Lỗi phân tích token:", error);

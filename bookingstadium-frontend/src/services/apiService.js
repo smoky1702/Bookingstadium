@@ -65,6 +65,12 @@ const userAPI = {
   
   // Lấy danh sách tất cả người dùng (chỉ admin)
   getAllUsers: () => apiClient.get('/users'),
+
+  // Thêm API phân quyền người dùng (dành cho admin)
+  assignUserRole: (userId, roleData) => apiClient.put(`/users/${userId}/role`, roleData),
+  
+  // Cập nhật vai trò người dùng
+  updateUserRole: (userId, roleData) => apiClient.put(`/users/${userId}/role`, roleData)
 };
 
 // API cho sân bóng
@@ -77,6 +83,15 @@ const stadiumAPI = {
   
   // Lấy tt chi tiết sân bóng theo ID
   getStadiumById: (stadiumId) => apiClient.get(`/stadium/${stadiumId}`),
+
+  // Cập nhật sân bóng
+  updateStadium: (stadiumId, stadiumData) => apiClient.put(`/stadium/${stadiumId}`, stadiumData),
+
+  // Xóa sân bóng
+  deleteStadium: (stadiumId) => apiClient.delete(`/stadium/${stadiumId}`),
+
+  // Cập nhật trạng thái sân
+  updateStadiumStatus: (stadiumId, statusData) => apiClient.patch(`/stadium/${stadiumId}/status`, statusData),
 };
 
 // API cho loại sân
@@ -125,6 +140,18 @@ const bookingAPI = {
   
   // Lấy danh sách đặt sân của người dùng
   getUserBookings: (userId) => apiClient.get(`/booking/user/${userId}`),
+
+  // Lấy tất cả đơn đặt sân (chỉ admin)
+  getAllBookings: () => apiClient.get('/booking'),
+
+  // Cập nhật trạng thái đặt sân
+  updateBookingStatus: (bookingId, statusData) => apiClient.patch(`/booking/${bookingId}/status`, statusData),
+
+  // Hủy đặt sân
+  cancelBooking: (bookingId) => apiClient.patch(`/booking/${bookingId}/cancel`, {}),
+
+  // Xác nhận đặt sân
+  confirmBooking: (bookingId) => apiClient.patch(`/booking/${bookingId}/confirm`, {}),
 };
 
 // API cho chi tiết đặt sân
@@ -152,6 +179,24 @@ const bookingDetailAPI = {
     apiClient.delete(`/booking-details/${bookingId}/${stadiumId}/${typeId}`),
 };
 
+// API cho thống kê (dành cho admin)
+const statisticsAPI = {
+  // Lấy tổng quan thống kê
+  getDashboardStats: () => apiClient.get('/admin/statistics/dashboard'),
+
+  // Lấy thống kê theo người dùng
+  getUserStats: () => apiClient.get('/admin/statistics/users'),
+
+  // Lấy thống kê theo sân bóng
+  getStadiumStats: () => apiClient.get('/admin/statistics/stadiums'),
+
+  // Lấy thống kê theo đặt sân
+  getBookingStats: () => apiClient.get('/admin/statistics/bookings'),
+
+  // Lấy thống kê doanh thu
+  getRevenueStats: (params) => apiClient.get('/admin/statistics/revenue', { params }),
+};
+
 export {
   apiClient,
   authAPI,
@@ -161,4 +206,5 @@ export {
   locationAPI,
   bookingAPI,
   bookingDetailAPI,
+  statisticsAPI,
 };
