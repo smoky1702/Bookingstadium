@@ -47,15 +47,18 @@ const authAPI = {
   
   // Đăng ký 
   register: (userData) => apiClient.post('/users', userData),
+  
+  // Kiểm tra token
+  introspect: (token) => apiClient.post('/auth/introspect', { token }),
+  
+  // Lấy token mới
+  refreshToken: (token) => apiClient.post('/auth/token', { token }),
 };
 
 // API cho người dùng
 const userAPI = {
   // Lấy tt người dùng theo ID
-  getCurrentUser: (userId) => apiClient.get(`/users/${userId}`),
-  
-  // Thêm API lấy người dùng theo email nếu backend hỗ trợ
-  getUserByEmail: (email) => apiClient.get(`/users/email/${email}`),
+  getUserById: (userId) => apiClient.get(`/users/${userId}`),
   
   // Cập nhật tt
   updateUser: (userId, userData) => apiClient.put(`/users/${userId}`, userData),
@@ -65,12 +68,6 @@ const userAPI = {
   
   // Lấy danh sách tất cả người dùng (chỉ admin)
   getAllUsers: () => apiClient.get('/users'),
-
-  // Thêm API phân quyền người dùng (dành cho admin)
-  assignUserRole: (userId, roleData) => apiClient.put(`/users/${userId}/role`, roleData),
-  
-  // Cập nhật vai trò người dùng
-  updateUserRole: (userId, roleData) => apiClient.put(`/users/${userId}/role`, roleData)
 };
 
 // API cho sân bóng
@@ -89,9 +86,6 @@ const stadiumAPI = {
 
   // Xóa sân bóng
   deleteStadium: (stadiumId) => apiClient.delete(`/stadium/${stadiumId}`),
-
-  // Cập nhật trạng thái sân
-  updateStadiumStatus: (stadiumId, statusData) => apiClient.patch(`/stadium/${stadiumId}/status`, statusData),
 };
 
 // API cho loại sân
@@ -135,66 +129,134 @@ const bookingAPI = {
   // Tạo đặt sân 
   createBooking: (bookingData) => apiClient.post('/booking', bookingData),
   
+  // Lấy danh sách đặt sân
+  getBookings: () => apiClient.get('/booking'),
+  
   // Lấy tt đặt sân theo ID
   getBookingById: (bookingId) => apiClient.get(`/booking/${bookingId}`),
   
-  // Lấy danh sách đặt sân của người dùng
-  getUserBookings: (userId) => apiClient.get(`/booking/user/${userId}`),
-
-  // Lấy tất cả đơn đặt sân (chỉ admin)
-  getAllBookings: () => apiClient.get('/booking'),
-
-  // Cập nhật trạng thái đặt sân
-  updateBookingStatus: (bookingId, statusData) => apiClient.patch(`/booking/${bookingId}/status`, statusData),
-
-  // Hủy đặt sân
-  cancelBooking: (bookingId) => apiClient.patch(`/booking/${bookingId}/cancel`, {}),
-
-  // Xác nhận đặt sân
-  confirmBooking: (bookingId) => apiClient.patch(`/booking/${bookingId}/confirm`, {}),
+  // Cập nhật đặt sân
+  updateBooking: (bookingId, bookingData) => apiClient.put(`/booking/${bookingId}`, bookingData),
+  
+  // Xóa đặt sân
+  deleteBooking: (bookingId) => apiClient.delete(`/booking/${bookingId}`),
 };
 
 // API cho chi tiết đặt sân
-const bookingDetailAPI = {
+const stadiumBookingDetailAPI = {
   // Tạo chi tiết đặt sân
-  createBookingDetail: (detailData) => apiClient.post('/booking-details', detailData),
+  createStadiumBookingDetail: (detailData) => apiClient.post('/details', detailData),
   
-  // Lấy tất cả chi tiết đặt sân
-  getAllBookingDetails: () => apiClient.get('/booking-details'),
+  // Lấy danh sách chi tiết đặt sân
+  getStadiumBookingDetails: () => apiClient.get('/details'),
   
-  // Lấy chi tiết đặt sân theo ID
-  getBookingDetailById: (bookingId, stadiumId, typeId) => 
-    apiClient.get(`/booking-details/${bookingId}/${stadiumId}/${typeId}`),
-  
-  // Lấy tất cả chi tiết đặt sân cho một đặt sân cụ thể
-  getBookingDetailsByBookingId: (bookingId) => 
-    apiClient.get(`/booking-details/booking/${bookingId}`),
+  // Lấy tt chi tiết đặt sân theo ID
+  getStadiumBookingDetailById: (detailId) => apiClient.get(`/details/${detailId}`),
   
   // Cập nhật chi tiết đặt sân
-  updateBookingDetail: (bookingId, stadiumId, typeId, detailData) => 
-    apiClient.put(`/booking-details/${bookingId}/${stadiumId}/${typeId}`, detailData),
+  updateStadiumBookingDetail: (detailId, detailData) => apiClient.put(`/details/${detailId}`, detailData),
   
   // Xóa chi tiết đặt sân
-  deleteBookingDetail: (bookingId, stadiumId, typeId) => 
-    apiClient.delete(`/booking-details/${bookingId}/${stadiumId}/${typeId}`),
+  deleteStadiumBookingDetail: (detailId) => apiClient.delete(`/details/${detailId}`),
 };
 
-// API cho thống kê (dành cho admin)
-const statisticsAPI = {
-  // Lấy tổng quan thống kê
-  getDashboardStats: () => apiClient.get('/admin/statistics/dashboard'),
+// API cho hóa đơn
+const billAPI = {
+  // Tạo hóa đơn
+  createBill: (billData) => apiClient.post('/bill', billData),
+  
+  // Lấy danh sách hóa đơn
+  getBills: () => apiClient.get('/bill'),
+  
+  // Lấy tt hóa đơn theo ID
+  getBillById: (billId) => apiClient.get(`/bill/${billId}`),
+  
+  // Cập nhật hóa đơn
+  updateBill: (billId, billData) => apiClient.put(`/bill/update/${billId}`, billData),
+  
+  // Thanh toán hóa đơn
+  payBill: (billId, paymentData) => apiClient.put(`/bill/paid/${billId}`, paymentData),
+  
+  // Xóa hóa đơn
+  deleteBill: (billId) => apiClient.delete(`/bill/${billId}`),
+};
 
-  // Lấy thống kê theo người dùng
-  getUserStats: () => apiClient.get('/admin/statistics/users'),
+// API cho đánh giá
+const evaluationAPI = {
+  // Tạo đánh giá
+  createEvaluation: (evaluationData) => apiClient.post('/evaluation', evaluationData),
+  
+  // Lấy danh sách đánh giá
+  getEvaluations: () => apiClient.get('/evaluation'),
+  
+  // Lấy tt đánh giá theo ID
+  getEvaluationById: (evaluationId) => apiClient.get(`/evaluation/${evaluationId}`),
+  
+  // Cập nhật đánh giá
+  updateEvaluation: (evaluationId, evaluationData) => apiClient.put(`/evaluation/${evaluationId}`, evaluationData),
+  
+  // Xóa đánh giá
+  deleteEvaluation: (evaluationId) => apiClient.delete(`/evaluation/${evaluationId}`),
+};
 
-  // Lấy thống kê theo sân bóng
-  getStadiumStats: () => apiClient.get('/admin/statistics/stadiums'),
+// API cho phương thức thanh toán
+const paymentMethodAPI = {
+  // Tạo phương thức thanh toán
+  createPaymentMethod: (paymentMethodData) => apiClient.post('/PaymentMethod', paymentMethodData),
+  
+  // Lấy danh sách phương thức thanh toán
+  getPaymentMethods: () => apiClient.get('/PaymentMethod'),
+  
+  // Lấy tt phương thức thanh toán theo ID
+  getPaymentMethodById: (paymentMethodId) => apiClient.get(`/PaymentMethod/${paymentMethodId}`),
+  
+  // Cập nhật phương thức thanh toán
+  updatePaymentMethod: (paymentMethodId, paymentMethodData) => apiClient.put(`/PaymentMethod/${paymentMethodId}`, paymentMethodData),
+  
+  // Xóa phương thức thanh toán
+  deletePaymentMethod: (paymentMethodId) => apiClient.delete(`/PaymentMethod/${paymentMethodId}`),
+};
 
-  // Lấy thống kê theo đặt sân
-  getBookingStats: () => apiClient.get('/admin/statistics/bookings'),
+// API cho lịch làm việc
+const workScheduleAPI = {
+  // Tạo lịch làm việc
+  createWorkSchedule: (workScheduleData) => apiClient.post('/WorkSchedule', workScheduleData),
+  
+  // Lấy danh sách lịch làm việc
+  getWorkSchedules: () => apiClient.get('/WorkSchedule'),
+  
+  // Lấy tt lịch làm việc theo ID
+  getWorkScheduleById: (workScheduleId) => apiClient.get(`/WorkSchedule/${workScheduleId}`),
+  
+  // Cập nhật lịch làm việc
+  updateWorkSchedule: (workScheduleId, workScheduleData) => apiClient.put(`/WorkSchedule/${workScheduleId}`, workScheduleData),
+  
+  // Xóa lịch làm việc
+  deleteWorkSchedule: (workScheduleId) => apiClient.delete(`/WorkSchedule/${workScheduleId}`),
+};
 
-  // Lấy thống kê doanh thu
-  getRevenueStats: (params) => apiClient.get('/admin/statistics/revenue', { params }),
+// API cho hình ảnh
+const imageAPI = {
+  // Upload hình ảnh
+  uploadImage: (locationId, file) => {
+    const formData = new FormData();
+    formData.append('imageUrl', file);
+    formData.append('locationId', locationId);
+    return apiClient.post('/images/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  
+  // Lấy danh sách hình ảnh
+  getImages: () => apiClient.get('/images'),
+  
+  // Lấy tt hình ảnh theo ID
+  getImageById: (imageId) => apiClient.get(`/images/${imageId}`),
+  
+  // Xóa hình ảnh
+  deleteImage: (imageId) => apiClient.delete(`/images/${imageId}`),
 };
 
 export {
@@ -205,6 +267,10 @@ export {
   typeAPI,
   locationAPI,
   bookingAPI,
-  bookingDetailAPI,
-  statisticsAPI,
+  stadiumBookingDetailAPI,
+  billAPI,
+  evaluationAPI,
+  paymentMethodAPI,
+  workScheduleAPI,
+  imageAPI,
 };

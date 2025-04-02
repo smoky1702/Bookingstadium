@@ -8,6 +8,8 @@ import AboutPage from './pages/AboutPage';
 import StadiumListPage from './pages/StadiumListPage';
 import StadiumDetailPage from './pages/StadiumDetailPage';
 import UserProfilePage from './pages/UserProfilePage';
+import BookingDetailPage from './pages/BookingDetailPage';
+import BillPage from './pages/BillPage';
 import PrivacyPolicy from './landingpage/PrivacyPolicy';
 import RefundPolicy from './landingpage/RefundPolicy';
 import CustomerPolicy from './landingpage/CustomerPolicy';
@@ -27,7 +29,8 @@ function App() {
           <Route path="/danh-sach-san" element={<StadiumListPage />} />
           <Route path="/san/:stadiumId" element={<StadiumDetailPage />} />
           <Route path="/profile" element={<UserProfilePage />} />
-          {/* Thêm các routes khác ở đây khi bạn phát triển thêm trang */}
+          <Route path="/booking/:bookingId" element={<BookingDetailPage />} />
+          <Route path="/bills" element={<BillPage />} />
           <Route path="/chinh-sach-bao-mat" element={<PrivacyPolicy />} />
           <Route path="/chinh-sach-huy-doi-tra" element={<RefundPolicy />} />
           <Route path="/chinh-sach-khach-hang" element={<CustomerPolicy />} />
