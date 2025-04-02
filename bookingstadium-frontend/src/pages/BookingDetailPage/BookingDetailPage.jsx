@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import AuthContext from '../context/AuthContext';
-import { bookingAPI, stadiumBookingDetailAPI, stadiumAPI, locationAPI, typeAPI, billAPI, evaluationAPI } from '../services/apiService';
-import './BookingDetailPage.css';
+import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer';
+import AuthContext from '../../context/AuthContext';
+import { bookingAPI, stadiumBookingDetailAPI, stadiumAPI, locationAPI, typeAPI, billAPI, evaluationAPI } from '../../services/apiService';
+import '../BookingDetailPage/BookingDetailPage.css';
 
 const BookingDetailPage = () => {
   const { bookingId } = useParams();

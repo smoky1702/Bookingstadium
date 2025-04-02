@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import '../pages/PolicyPage.css';
+import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer';
+import '../PolicyPage/PolicyPage.css';
 
 const PolicyPage = () => {
   return (

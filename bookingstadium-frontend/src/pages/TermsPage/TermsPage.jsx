@@ -1,7 +1,7 @@
 import React from 'react';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import '../pages/TermsPage.css';
+import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer';
+import '../TermsPage/TermsPage.css';
 
 const TermsPage = () => {
   return (

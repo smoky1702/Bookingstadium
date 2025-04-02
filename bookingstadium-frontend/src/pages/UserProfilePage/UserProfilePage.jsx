@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import AuthContext from '../context/AuthContext';
-import AdminPanel from '../Admin/AdminPanel';
-import { userAPI, bookingAPI } from '../services/apiService';
-import '../pages/UserProfilePage.css';
+import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer';
+import AuthContext from '../../context/AuthContext';
+import AdminPanel from '../../Admin/AdminPanel';
+import { userAPI, bookingAPI } from '../../services/apiService';
+import '../UserProfilePage/UserProfilePage.css';
 
 const UserProfilePage = () => {
   const { currentUser, isAuthenticated, logout } = useContext(AuthContext);

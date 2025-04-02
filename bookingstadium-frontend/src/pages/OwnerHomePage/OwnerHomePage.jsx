@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import AuthContext from '../context/AuthContext';
-import { locationAPI, stadiumAPI, workScheduleAPI } from '../services/apiService';
-import './OwnerHomePage.css';
+import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer';
+import AuthContext from '.././context/AuthContext';
+import { locationAPI, stadiumAPI, workScheduleAPI } from '../../services/apiService';
+import '../OwnerHomePage/OwnerHomePage.css';
 
 const OwnerHomePage = () => {
   const { isAuthenticated, currentUser } = useContext(AuthContext);

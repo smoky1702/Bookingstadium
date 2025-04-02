@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../pages/SearchModal.css';
+import '../SearchModal/SearchModal.css';
 
 const SearchModal = ({ isOpen, onClose }) => {
   const [searchData, setSearchData] = useState({

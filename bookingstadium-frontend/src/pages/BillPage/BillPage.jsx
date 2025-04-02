@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import AuthContext from '../context/AuthContext';
-import { billAPI, paymentMethodAPI } from '../services/apiService';
-import './BillPage.css';
+import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer';
+import AuthContext from '../../context/AuthContext';
+import { billAPI, paymentMethodAPI } from '../../services/apiService';
+import '../BillPage/BillPage.css';
 
 const BillPage = () => {
   const { isAuthenticated, currentUser } = useContext(AuthContext);

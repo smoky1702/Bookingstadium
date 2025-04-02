@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import { locationAPI, typeAPI, stadiumAPI } from '../services/apiService';
-import '../pages/StadiumListPage.css';
+import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer';
+import { locationAPI, typeAPI, stadiumAPI } from '../../services/apiService';
+import '../StadiumListPage/StadiumListPage.css';
 
 const StadiumListPage = () => {
   const [locations, setLocations] = useState([]);

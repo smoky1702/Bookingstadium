@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
 import LoginModal from '../Authentication/LoginModal';
 import RegisterModal from '../Authentication/RegisterModal';
-import SearchModal from '../pages/SearchModal';
+import SearchModal from '../pages/SearchModal/SearchModal';
 import '../components/Navbar.css';
 
 const Navbar = () => {

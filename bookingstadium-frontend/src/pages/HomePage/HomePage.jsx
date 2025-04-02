@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import '../pages/HomePage.css';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+import '../HomePage/HomePage.css';
+import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer';
 
 const HomePage = () => {
   const [searchData, setSearchData] = useState({
