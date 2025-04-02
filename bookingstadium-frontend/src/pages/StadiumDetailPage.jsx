@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import AuthContext from '../context/AuthContext';
-import { stadiumAPI, locationAPI, typeAPI, bookingAPI } from '../services/apiService';
+import { stadiumAPI, locationAPI, typeAPI, bookingAPI, stadiumBookingDetailAPI } from '../services/apiService';
 import '../pages/StadiumDetailPage.css';
 
 const StadiumDetailPage = () => {
   const { stadiumId } = useParams();
+  const navigate = useNavigate();
   const { isAuthenticated, currentUser } = useContext(AuthContext);
   
   const [stadium, setStadium] = useState(null);
@@ -19,21 +20,21 @@ const StadiumDetailPage = () => {
   // Booking form data
   const [bookingData, setBookingData] = useState({
     userId: currentUser?.user_id || '',
+    locationId: '',
     dateOfBooking: '',
     startTime: '',
     endTime: '',
-    numberOfBookings: 1
   });
   
-  // Đặt availableTimeSlots vào state thay vì khai báo trực tiếp
+  // Thời gian có sẵn
   const [availableTimeSlots, setAvailableTimeSlots] = useState([
-    { id: '1', time: '08:00 - 10:00', available: true },
-    { id: '2', time: '10:00 - 12:00', available: true },
-    { id: '3', time: '12:00 - 14:00', available: false },
-    { id: '4', time: '14:00 - 16:00', available: true },
-    { id: '5', time: '16:00 - 18:00', available: true },
-    { id: '6', time: '18:00 - 20:00', available: false },
-    { id: '7', time: '20:00 - 22:00', available: true }
+    { id: '1', time: '08:00 - 10:00', available: true, start: '08:00:00', end: '10:00:00' },
+    { id: '2', time: '10:00 - 12:00', available: true, start: '10:00:00', end: '12:00:00' },
+    { id: '3', time: '12:00 - 14:00', available: true, start: '12:00:00', end: '14:00:00' },
+    { id: '4', time: '14:00 - 16:00', available: true, start: '14:00:00', end: '16:00:00' },
+    { id: '5', time: '16:00 - 18:00', available: true, start: '16:00:00', end: '18:00:00' },
+    { id: '6', time: '18:00 - 20:00', available: true, start: '18:00:00', end: '20:00:00' },
+    { id: '7', time: '20:00 - 22:00', available: true, start: '20:00:00', end: '22:00:00' }
   ]);
   
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
@@ -46,15 +47,20 @@ const StadiumDetailPage = () => {
         setLoading(true);
         setError(null);
         
-        // This is a placeholder. In a real implementation,
-        // you would have an API endpoint to get stadium details by ID
+        // Lấy thông tin sân bóng
         const response = await stadiumAPI.getStadiumById(stadiumId);
         
         if (response.data && response.data.result) {
           const stadiumData = response.data.result;
           setStadium(stadiumData);
           
-          // Fetch location details
+          // Cập nhật locationId trong bookingData
+          setBookingData(prev => ({
+            ...prev,
+            locationId: stadiumData.locationId
+          }));
+          
+          // Lấy thông tin địa điểm
           if (stadiumData.locationId) {
             const locationResponse = await locationAPI.getLocationById(stadiumData.locationId);
             if (locationResponse.data && locationResponse.data.result) {
@@ -62,17 +68,23 @@ const StadiumDetailPage = () => {
             }
           }
           
-          // Fetch type details
+          // Lấy thông tin loại sân
           if (stadiumData.typeId) {
-            const typeResponse = await typeAPI.getTypeById(stadiumData.typeId);
-            if (typeResponse.data && typeResponse.data.result) {
-              setType(typeResponse.data.result);
+            try {
+              const typeResponse = await typeAPI.getTypeById(stadiumData.typeId);
+              if (typeResponse.data && typeResponse.data.result) {
+                setType(typeResponse.data.result);
+              }
+            } catch (typeError) {
+              console.error('Error fetching type details:', typeError);
             }
           }
+        } else {
+          setError('Không tìm thấy thông tin sân bóng.');
         }
       } catch (error) {
         console.error('Error fetching stadium details:', error);
-        setError('Failed to load stadium details. Please try again later.');
+        setError('Không thể tải thông tin sân bóng. Vui lòng thử lại sau.');
       } finally {
         setLoading(false);
       }
@@ -84,7 +96,7 @@ const StadiumDetailPage = () => {
   }, [stadiumId]);
   
   useEffect(() => {
-    // Update userId in bookingData when currentUser changes
+    // Cập nhật userId trong bookingData khi currentUser thay đổi
     if (currentUser) {
       setBookingData(prev => ({
         ...prev,
@@ -94,23 +106,23 @@ const StadiumDetailPage = () => {
   }, [currentUser]);
   
   const handleDateChange = (e) => {
+    const selectedDate = e.target.value;
     setBookingData(prev => ({
       ...prev,
-      dateOfBooking: e.target.value
+      dateOfBooking: selectedDate
     }));
     
-    // Giả lập lấy time slots khả dụng cho ngày được chọn
-    // sẽ gọi API để lấy dữ liệu này
-    const newSlots = [
-      { id: '1', time: '08:00 - 10:00', available: Math.random() > 0.3 },
-      { id: '2', time: '10:00 - 12:00', available: Math.random() > 0.3 },
-      { id: '3', time: '12:00 - 14:00', available: Math.random() > 0.3 },
-      { id: '4', time: '14:00 - 16:00', available: Math.random() > 0.3 },
-      { id: '5', time: '16:00 - 18:00', available: Math.random() > 0.3 },
-      { id: '6', time: '18:00 - 20:00', available: Math.random() > 0.3 },
-      { id: '7', time: '20:00 - 22:00', available: Math.random() > 0.3 }
-    ];
+    // Lấy time slots khả dụng cho ngày được chọn
+    // Trong dự án thực tế, sẽ gọi API để lấy các time slots chưa được đặt
+    // Ở đây sẽ mô phỏng bằng cách random
+    const newSlots = availableTimeSlots.map(slot => ({
+      ...slot,
+      available: Math.random() > 0.3
+    }));
     setAvailableTimeSlots(newSlots);
+    
+    // Reset time slot đã chọn khi thay đổi ngày
+    setSelectedTimeSlot(null);
   };
   
   const handleTimeSlotSelect = (slot) => {
@@ -118,13 +130,10 @@ const StadiumDetailPage = () => {
     
     setSelectedTimeSlot(slot.id);
     
-    // Parse start and end times from the slot
-    const [startTime, endTime] = slot.time.split(' - ');
-    
     setBookingData(prev => ({
       ...prev,
-      startTime: startTime,
-      endTime: endTime
+      startTime: slot.start,
+      endTime: slot.end
     }));
   };
   
@@ -132,47 +141,63 @@ const StadiumDetailPage = () => {
     e.preventDefault();
     
     if (!isAuthenticated) {
-      setBookingError('Please log in to book a stadium.');
+      setBookingError('Vui lòng đăng nhập để đặt sân.');
       return;
     }
     
     if (!bookingData.dateOfBooking) {
-      setBookingError('Please select a date.');
+      setBookingError('Vui lòng chọn ngày.');
       return;
     }
     
     if (!selectedTimeSlot) {
-      setBookingError('Please select a time slot.');
+      setBookingError('Vui lòng chọn khung giờ.');
       return;
     }
     
     try {
       setBookingError(null);
       
-      const response = await bookingAPI.createBooking({
+      // Tạo đặt sân mới
+      const bookingResponse = await bookingAPI.createBooking({
         userId: bookingData.userId,
+        locationId: bookingData.locationId,
         dateOfBooking: bookingData.dateOfBooking,
         startTime: bookingData.startTime,
-        endTime: bookingData.endTime,
-        numberOfBookings: bookingData.numberOfBookings
+        endTime: bookingData.endTime
       });
       
-      if (response.data && response.data.result) {
+      if (bookingResponse.data && bookingResponse.data.result) {
+        // Lấy booking ID từ response
+        const newBookingId = bookingResponse.data.result.bookingId || bookingResponse.data.result.stadium_booking_id;
+        
+        // Tạo chi tiết đặt sân
+        await stadiumBookingDetailAPI.createStadiumBookingDetail({
+          stadium_booking_id: newBookingId,
+          type_id: stadium.typeId,
+          stadium_id: stadium.stadiumId
+        });
+        
         setBookingSuccess(true);
         
         // Reset form
         setSelectedTimeSlot(null);
         setBookingData({
           userId: currentUser?.user_id || '',
+          locationId: stadium.locationId,
           dateOfBooking: '',
           startTime: '',
-          endTime: '',
-          numberOfBookings: 1
+          endTime: ''
         });
+        
+        // Chuyển hướng đến trang chi tiết đặt sân sau 2 giây
+        setTimeout(() => {
+          navigate(`/booking/${newBookingId}`);
+        }, 2000);
       }
     } catch (error) {
       console.error('Error booking stadium:', error);
-      setBookingError('Failed to book stadium. Please try again.');
+      setBookingError('Đặt sân thất bại. Vui lòng thử lại sau.');
     }
   };
 
@@ -181,7 +206,7 @@ const StadiumDetailPage = () => {
       <div className="stadium-detail-page">
         <Navbar />
         <div className="container">
-          <div className="loading">Loading stadium details...</div>
+          <div className="loading">Đang tải thông tin sân bóng...</div>
         </div>
         <Footer />
       </div>
@@ -195,7 +220,7 @@ const StadiumDetailPage = () => {
         <div className="container">
           <div className="error-message">{error}</div>
           <Link to="/danh-sach-san" className="back-button">
-            <i className="fas fa-arrow-left"></i> Back to Stadium List
+            <i className="fas fa-arrow-left"></i> Quay lại danh sách sân
           </Link>
         </div>
         <Footer />
@@ -208,15 +233,30 @@ const StadiumDetailPage = () => {
       <div className="stadium-detail-page">
         <Navbar />
         <div className="container">
-          <div className="error-message">Stadium not found.</div>
+          <div className="error-message">Không tìm thấy sân bóng.</div>
           <Link to="/danh-sach-san" className="back-button">
-            <i className="fas fa-arrow-left"></i> Back to Stadium List
+            <i className="fas fa-arrow-left"></i> Quay lại danh sách sân
           </Link>
         </div>
         <Footer />
       </div>
     );
   }
+
+  // Hàm tính tổng giá khi đặt sân
+  const calculateTotalPrice = () => {
+    if (!stadium || !selectedTimeSlot) return 0;
+    
+    const selectedSlot = availableTimeSlots.find(slot => slot.id === selectedTimeSlot);
+    if (!selectedSlot) return 0;
+    
+    // Phân tích giờ để tính số giờ thuê
+    const startHour = parseInt(selectedSlot.start.split(':')[0]);
+    const endHour = parseInt(selectedSlot.end.split(':')[0]);
+    const hours = endHour - startHour;
+    
+    return stadium.price * hours;
+  };
 
   return (
     <div className="stadium-detail-page">
@@ -236,7 +276,7 @@ const StadiumDetailPage = () => {
             <div className="stadium-images">
               <div className="main-image">
                 <img src="/stadium-placeholder.jpg" alt={stadium.stadiumName} />
-                <div className="stadium-type">{type ? type.typeName : 'Unknown Type'}</div>
+                <div className="stadium-type">{type ? type.typeName : 'Không xác định'}</div>
               </div>
               <div className="thumbnail-images">
                 <img src="/stadium-thumb1.jpg" alt="Thumbnail 1" className="thumbnail" />
@@ -252,11 +292,11 @@ const StadiumDetailPage = () => {
                 <div className="stadium-meta">
                   <div className="meta-item">
                     <i className="fas fa-map-marker-alt"></i>
-                    <span>{location ? location.address : 'Unknown Location'}</span>
+                    <span>{location ? location.address : 'Không có thông tin địa chỉ'}</span>
                   </div>
                   <div className="meta-item">
                     <i className="fas fa-futbol"></i>
-                    <span>{type ? type.typeName : 'Unknown Type'}</span>
+                    <span>{type ? type.typeName : 'Không xác định'}</span>
                   </div>
                   <div className="meta-item">
                     <i className="fas fa-tag"></i>
@@ -264,9 +304,10 @@ const StadiumDetailPage = () => {
                   </div>
                   <div className="meta-item">
                     <i className="fas fa-check-circle"></i>
-                    <span className={`status ${stadium.status?.toLowerCase() || ''}`}>
+                    <span className={`status ${stadium.status?.toLowerCase() || 'available'}`}>
                       {stadium.status === 'AVAILABLE' ? 'Còn trống' : 
-                       stadium.status === 'MAINTENANCE' ? 'Bảo trì' : 'Đã đặt'}
+                       stadium.status === 'MAINTENANCE' ? 'Bảo trì' : 
+                       stadium.status === 'BOOKED' ? 'Đã đặt' : 'Còn trống'}
                     </span>
                   </div>
                 </div>
@@ -278,7 +319,11 @@ const StadiumDetailPage = () => {
                 
                 <div className="stadium-location">
                   <h3>Địa chỉ</h3>
-                  <p>{location ? `${location.address}, ${location.district}, ${location.city}` : 'Unknown Location'}</p>
+                  <p>
+                    {location ? (
+                      `${location.address}, ${location.district || ''}, ${location.city || ''}`
+                    ) : 'Không có thông tin địa chỉ'}
+                  </p>
                   {/* Placeholder for map */}
                   <div className="map-placeholder">
                     <img src="/map-placeholder.jpg" alt="Map" />
@@ -292,7 +337,7 @@ const StadiumDetailPage = () => {
                 {bookingSuccess && (
                   <div className="booking-success">
                     <i className="fas fa-check-circle"></i>
-                    <p>Đặt sân thành công! Vui lòng kiểm tra email để xác nhận thông tin.</p>
+                    <p>Đặt sân thành công! Đang chuyển hướng đến trang chi tiết đặt sân...</p>
                   </div>
                 )}
                 
@@ -312,24 +357,27 @@ const StadiumDetailPage = () => {
                       onChange={handleDateChange}
                       className="form-control"
                       required
+                      min={new Date().toISOString().split('T')[0]}
                     />
                   </div>
                   
-                  <div className="form-group">
-                    <label>Chọn khung giờ:</label>
-                    <div className="time-slots">
-                      {availableTimeSlots.map(slot => (
-                        <div 
-                          key={slot.id}
-                          className={`time-slot ${!slot.available ? 'unavailable' : ''} ${selectedTimeSlot === slot.id ? 'selected' : ''}`}
-                          onClick={() => handleTimeSlotSelect(slot)}
-                        >
-                          {slot.time}
-                          {!slot.available && <span className="unavailable-label">Đã đặt</span>}
-                        </div>
-                      ))}
+                  {bookingData.dateOfBooking && (
+                    <div className="form-group">
+                      <label>Chọn khung giờ:</label>
+                      <div className="time-slots">
+                        {availableTimeSlots.map(slot => (
+                          <div 
+                            key={slot.id}
+                            className={`time-slot ${!slot.available ? 'unavailable' : ''} ${selectedTimeSlot === slot.id ? 'selected' : ''}`}
+                            onClick={() => handleTimeSlotSelect(slot)}
+                          >
+                            {slot.time}
+                            {!slot.available && <span className="unavailable-label">Đã đặt</span>}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                   
                   <div className="booking-summary">
                     <h4>Thông tin đặt sân</h4>
@@ -351,27 +399,24 @@ const StadiumDetailPage = () => {
                     )}
                     <div className="summary-item total">
                       <span>Tổng tiền:</span>
-                      <span>{stadium.price?.toLocaleString() || 0} VNĐ</span>
+                      <span>{calculateTotalPrice().toLocaleString()} VNĐ</span>
                     </div>
                   </div>
                   
                   <button 
                     type="submit" 
                     className="booking-button"
-                    disabled={!isAuthenticated || !bookingData.dateOfBooking || !selectedTimeSlot || stadium.status !== 'AVAILABLE'}
+                    disabled={!isAuthenticated || !bookingData.dateOfBooking || !selectedTimeSlot || stadium.status === 'MAINTENANCE' || stadium.status === 'BOOKED' || bookingSuccess}
                   >
                     {!isAuthenticated ? 'Vui lòng đăng nhập để đặt sân' : 'Đặt sân ngay'}
                   </button>
                   
                   {!isAuthenticated && (
                     <div className="login-prompt">
-                      <p>Vui lòng 
-                        <button 
-                            className="login-link" 
-                            onClick={() => document.querySelector('.navbar-action-button').click()}
-                        >
-                            đăng nhập
-                        </button> để đặt sân.</p>
+                      <p>Vui lòng <a href="#" onClick={(e) => {
+                        e.preventDefault();
+                        document.querySelector('.navbar-action-button').click();
+                      }}>đăng nhập</a> để đặt sân.</p>
                     </div>
                   )}
                 </form>

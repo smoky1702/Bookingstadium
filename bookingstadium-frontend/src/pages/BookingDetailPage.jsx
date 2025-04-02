@@ -75,30 +75,54 @@ const BookingDetailPage = () => {
             setProgressPercent(66);
           } else if (bookingData.status === 'COMPLETED') {
             setProgressPercent(100);
+          } else if (bookingData.status === 'CANCELLED') {
+            setProgressPercent(0);
           }
           
           // Lấy thông tin chi tiết đặt sân
-          const bookingDetailResponse = await stadiumBookingDetailAPI.getStadiumBookingDetailById(bookingId);
-          if (bookingDetailResponse.data && bookingDetailResponse.data.result) {
-            setBookingDetail(bookingDetailResponse.data.result);
-            
-            // Lấy thông tin sân
-            const stadiumResponse = await stadiumAPI.getStadiumById(bookingDetailResponse.data.result.stadiumId);
-            if (stadiumResponse.data && stadiumResponse.data.result) {
-              setStadium(stadiumResponse.data.result);
+          try {
+            const bookingDetailResponse = await stadiumBookingDetailAPI.getStadiumBookingDetailById(bookingId);
+            if (bookingDetailResponse.data && bookingDetailResponse.data.result) {
+              setBookingDetail(bookingDetailResponse.data.result);
               
-              // Lấy thông tin địa điểm
-              const locationResponse = await locationAPI.getLocationById(stadiumResponse.data.result.locationId);
-              if (locationResponse.data && locationResponse.data.result) {
-                setLocation(locationResponse.data.result);
+              // Lấy thông tin sân
+              if (bookingDetailResponse.data.result.stadiumId) {
+                try {
+                  const stadiumResponse = await stadiumAPI.getStadiumById(bookingDetailResponse.data.result.stadiumId);
+                  if (stadiumResponse.data && stadiumResponse.data.result) {
+                    setStadium(stadiumResponse.data.result);
+                    
+                    // Lấy thông tin địa điểm
+                    if (stadiumResponse.data.result.locationId) {
+                      try {
+                        const locationResponse = await locationAPI.getLocationById(stadiumResponse.data.result.locationId);
+                        if (locationResponse.data && locationResponse.data.result) {
+                          setLocation(locationResponse.data.result);
+                        }
+                      } catch (locationError) {
+                        console.error('Lỗi khi lấy thông tin địa điểm:', locationError);
+                      }
+                    }
+                  }
+                } catch (stadiumError) {
+                  console.error('Lỗi khi lấy thông tin sân:', stadiumError);
+                }
+              }
+              
+              // Lấy thông tin loại sân
+              if (bookingDetailResponse.data.result.typeId) {
+                try {
+                  const typeResponse = await typeAPI.getTypeById(bookingDetailResponse.data.result.typeId);
+                  if (typeResponse.data && typeResponse.data.result) {
+                    setType(typeResponse.data.result);
+                  }
+                } catch (typeError) {
+                  console.error('Lỗi khi lấy thông tin loại sân:', typeError);
+                }
               }
             }
-            
-            // Lấy thông tin loại sân
-            const typeResponse = await typeAPI.getTypeById(bookingDetailResponse.data.result.typeId);
-            if (typeResponse.data && typeResponse.data.result) {
-              setType(typeResponse.data.result);
-            }
+          } catch (detailError) {
+            console.error('Lỗi khi lấy thông tin chi tiết đặt sân:', detailError);
           }
           
           // Lấy thông tin hóa đơn
@@ -108,11 +132,16 @@ const BookingDetailPage = () => {
               const billData = billsResponse.data.result.find(b => b.stadiumBookingId === bookingId);
               if (billData) {
                 setBill(billData);
+              } else {
+                // Nếu không tìm thấy hóa đơn, có thể cần tạo hóa đơn mới
+                console.log('Không tìm thấy hóa đơn cho đơn đặt sân này.');
               }
             }
-          } catch (error) {
-            console.error('Lỗi khi lấy thông tin hóa đơn:', error);
+          } catch (billError) {
+            console.error('Lỗi khi lấy thông tin hóa đơn:', billError);
           }
+        } else {
+          setError('Không tìm thấy thông tin đặt sân.');
         }
       } catch (error) {
         console.error('Lỗi khi lấy thông tin đặt sân:', error);
@@ -128,9 +157,37 @@ const BookingDetailPage = () => {
   // Xử lý thanh toán
   const handlePayment = () => {
     if (bill) {
-      navigate(`/bills/${bill.billId}`);
+      navigate(`/bills`);
     } else {
-      setError('Không tìm thấy hóa đơn cho đơn đặt sân này.');
+      // Tạo hóa đơn mới nếu chưa có
+      createNewBill();
+    }
+  };
+  
+  // Tạo hóa đơn mới
+  const createNewBill = async () => {
+    try {
+      setLoading(true);
+      
+      // Giả sử mặc định dùng phương thức thanh toán ID = 1
+      const billData = {
+        stadiumBookingId: bookingId,
+        paymentMethodId: 1
+      };
+      
+      const response = await billAPI.createBill(billData);
+      
+      if (response.data && response.data.result) {
+        setBill(response.data.result);
+        navigate(`/bills`);
+      } else {
+        setError('Không thể tạo hóa đơn. Vui lòng thử lại sau.');
+      }
+    } catch (error) {
+      console.error('Lỗi khi tạo hóa đơn:', error);
+      setError('Không thể tạo hóa đơn. Vui lòng thử lại sau.');
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -144,7 +201,6 @@ const BookingDetailPage = () => {
       setLoading(true);
       
       const response = await bookingAPI.updateBooking(bookingId, {
-        ...booking,
         status: 'CANCELLED'
       });
       
@@ -154,19 +210,26 @@ const BookingDetailPage = () => {
           status: 'CANCELLED'
         });
         
+        setProgressPercent(0);
         setSuccess('Hủy đặt sân thành công.');
         
         // Cập nhật bill nếu có
         if (bill) {
-          await billAPI.updateBill(bill.billId, {
-            status: 'CANCELLED'
-          });
-          
-          setBill({
-            ...bill,
-            status: 'CANCELLED'
-          });
+          try {
+            await billAPI.updateBill(bill.billId, {
+              status: 'CANCELLED'
+            });
+            
+            setBill({
+              ...bill,
+              status: 'CANCELLED'
+            });
+          } catch (billError) {
+            console.error('Lỗi khi cập nhật hóa đơn:', billError);
+          }
         }
+      } else {
+        setError('Không thể hủy đặt sân. Vui lòng thử lại sau.');
       }
     } catch (error) {
       console.error('Lỗi khi hủy đặt sân:', error);
@@ -203,6 +266,11 @@ const BookingDetailPage = () => {
     try {
       setLoading(true);
       
+      if (!location) {
+        alert('Không tìm thấy thông tin địa điểm để đánh giá.');
+        return;
+      }
+      
       const response = await evaluationAPI.createEvaluation({
         user_id: currentUser.user_id,
         location_id: location.locationId,
@@ -213,6 +281,8 @@ const BookingDetailPage = () => {
       if (response.data && response.data.result) {
         setSuccess('Gửi đánh giá thành công!');
         closeFeedbackModal();
+      } else {
+        setError('Không thể gửi đánh giá. Vui lòng thử lại sau.');
       }
     } catch (error) {
       console.error('Lỗi khi gửi đánh giá:', error);
@@ -226,16 +296,20 @@ const BookingDetailPage = () => {
   const calculateTotalHours = () => {
     if (!booking || !booking.startTime || !booking.endTime) return 0;
     
-    const startTime = new Date(`2023-01-01T${booking.startTime}`);
-    const endTime = new Date(`2023-01-01T${booking.endTime}`);
+    const startTimeParts = booking.startTime.split(':');
+    const endTimeParts = booking.endTime.split(':');
     
-    const diff = endTime - startTime;
-    return diff / (1000 * 60 * 60); // Chuyển từ ms sang giờ
+    if (startTimeParts.length < 2 || endTimeParts.length < 2) return 0;
+    
+    const startHour = parseInt(startTimeParts[0]);
+    const endHour = parseInt(endTimeParts[0]);
+    
+    return endHour - startHour;
   };
   
   // Tính tổng tiền
   const calculateTotalPrice = () => {
-    if (!bookingDetail) return 0;
+    if (!bookingDetail || !bookingDetail.price) return 0;
     return bookingDetail.price;
   };
   
@@ -279,7 +353,7 @@ const BookingDetailPage = () => {
             <span className="current">Chi tiết đặt sân</span>
           </div>
           
-          {loading ? (
+          {loading && !booking ? (
             <div className="loading">
               <i className="fas fa-spinner fa-spin"></i>
               <p>Đang tải dữ liệu...</p>
@@ -361,7 +435,7 @@ const BookingDetailPage = () => {
                           <div className="stadium-name">{stadium.stadiumName}</div>
                           <div className="stadium-type">{type ? type.typeName : 'Không xác định'}</div>
                           <div className="stadium-address">
-                            {location ? `${location.address}, ${location.district}, ${location.city}` : 'Không xác định'}
+                            {location ? `${location.address}, ${location.district || ''}, ${location.city || ''}` : 'Không xác định'}
                           </div>
                         </div>
                       </div>
@@ -369,7 +443,7 @@ const BookingDetailPage = () => {
                       <div className="price-summary">
                         <div className="price-row">
                           <div>Giá sân:</div>
-                          <div>{stadium.price.toLocaleString()} VNĐ/giờ</div>
+                          <div>{stadium.price ? stadium.price.toLocaleString() : '0'} VNĐ/giờ</div>
                         </div>
                         <div className="price-row">
                           <div>Thời gian:</div>
@@ -377,7 +451,7 @@ const BookingDetailPage = () => {
                         </div>
                         <div className="price-row total">
                           <div>Tổng tiền:</div>
-                          <div>{calculateTotalPrice().toLocaleString()} VNĐ</div>
+                          <div>{calculateTotalPrice() ? calculateTotalPrice().toLocaleString() : '0'} VNĐ</div>
                         </div>
                       </div>
                     </div>
@@ -387,7 +461,8 @@ const BookingDetailPage = () => {
               
               {/* Các nút hành động */}
               <div className="booking-actions">
-                {bill && bill.status === 'UNPAID' && (
+                {(booking.status === 'PENDING' || booking.status === 'CONFIRMED') && 
+                (!bill || (bill && bill.status === 'UNPAID')) && (
                   <button className="booking-action-button pay-button" onClick={handlePayment}>
                     Thanh toán
                   </button>

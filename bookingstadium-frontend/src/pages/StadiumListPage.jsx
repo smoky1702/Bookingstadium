@@ -40,10 +40,15 @@ const StadiumListPage = () => {
         const stadiumsResponse = await stadiumAPI.getStadiums();
         if (stadiumsResponse.data && stadiumsResponse.data.result) {
           setStadiums(stadiumsResponse.data.result);
+        } else {
+          // Nếu không có dữ liệu trong response.result, kiểm tra xem có dữ liệu ở response không
+          if (stadiumsResponse.data) {
+            setStadiums(Array.isArray(stadiumsResponse.data) ? stadiumsResponse.data : []);
+          }
         }
       } catch (error) {
         console.error('Error fetching data:', error);
-        setError('Failed to load data. Please try again later.');
+        setError('Không thể tải dữ liệu. Vui lòng thử lại sau.');
       } finally {
         setLoading(false);
       }
@@ -71,13 +76,13 @@ const StadiumListPage = () => {
   // Get location name by ID
   const getLocationName = (locationId) => {
     const location = locations.find(loc => loc.locationId === locationId);
-    return location ? location.locationName : 'Unknown Location';
+    return location ? location.locationName : 'Địa điểm không xác định';
   };
   
   // Get type name by ID
   const getTypeName = (typeId) => {
     const type = types.find(t => t.typeId === typeId);
-    return type ? type.typeName : 'Unknown Type';
+    return type ? type.typeName : 'Loại sân không xác định';
   };
   
   // Handle search input change
@@ -95,7 +100,7 @@ const StadiumListPage = () => {
   };
   
   const handlePriceChange = (e, type) => {
-    const value = parseInt(e.target.value);
+    const value = parseInt(e.target.value) || 0;
     setPriceRange(prev => ({
       ...prev,
       [type]: value
@@ -205,7 +210,7 @@ const StadiumListPage = () => {
               {filteredStadiums.map(stadium => (
                 <div key={stadium.stadiumId} className="stadium-card">
                   <div className="stadium-image">
-                    {/* Placeholder image */}
+                    {/* Sử dụng hình ảnh placeholder */}
                     <img src={`/stadium-placeholder.jpg`} alt={stadium.stadiumName} />
                     <div className="stadium-type">{getTypeName(stadium.typeId)}</div>
                   </div>
@@ -217,12 +222,13 @@ const StadiumListPage = () => {
                     </div>
                     <div className="stadium-price">
                       <i className="fas fa-tag"></i>
-                      <span>{stadium.price.toLocaleString()} VNĐ/giờ</span>
+                      <span>{stadium.price ? stadium.price.toLocaleString() : '0'} VNĐ/giờ</span>
                     </div>
                     <div className="stadium-status">
-                      <span className={`status-badge ${stadium.status.toLowerCase()}`}>
+                      <span className={`status-badge ${stadium.status ? stadium.status.toLowerCase() : 'available'}`}>
                         {stadium.status === 'AVAILABLE' ? 'Còn trống' : 
-                         stadium.status === 'MAINTENANCE' ? 'Bảo trì' : 'Đã đặt'}
+                         stadium.status === 'MAINTENANCE' ? 'Bảo trì' : 
+                         stadium.status === 'BOOKED' ? 'Đã đặt' : 'Còn trống'}
                       </span>
                     </div>
                     <Link to={`/san/${stadium.stadiumId}`} className="view-details-button">
