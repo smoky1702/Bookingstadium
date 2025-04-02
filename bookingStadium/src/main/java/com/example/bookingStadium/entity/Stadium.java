@@ -39,9 +39,4 @@ public class Stadium {
     @Column(name = "description")
     private String description;
 
-
-//    @PrePersist
-//    protected void onCreate() {
-//        this.dateCreated = LocalDate.now();
-//    }
 }

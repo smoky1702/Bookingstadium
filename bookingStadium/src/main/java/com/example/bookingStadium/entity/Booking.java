@@ -1,13 +1,13 @@
 package com.example.bookingStadium.entity;
 
-import com.example.bookingStadium.dto.request.Stadium.BookingStatus;
+import com.example.bookingStadium.dto.request.Booking.BookingStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.sql.Date;
 import java.sql.Time;
-import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "Stadium_Booking")
@@ -15,14 +15,18 @@ import java.sql.Timestamp;
 @Setter
 public class Booking {
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "stadium_booking_id")
     private String bookingId;
 
     @Column(name = "user_id")
     private String userId;
 
+    @Column(name = "location_id")
+    private String locationId;
+
     @Column(name = "date_of_booking")
-    private Date dateOfBooking;
+    private LocalDate dateOfBooking;
 
     @Column(name = "start_time")
     private Time startTime;
@@ -34,9 +38,17 @@ public class Booking {
     @Column(name = "status")
     private BookingStatus status = BookingStatus.PENDING;
 
-    @Column(name = "number_of_bookings")
-    private int numberOfBookings;
-
     @Column(name = "date_created")
-    private Timestamp dateCreated;
+    private LocalDateTime dateCreated = LocalDateTime.now();
+
 }
+
+
+
+
+
+
+
+
+
+

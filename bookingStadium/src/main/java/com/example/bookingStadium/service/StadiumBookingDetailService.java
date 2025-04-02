@@ -1,18 +1,31 @@
 package com.example.bookingStadium.service;
 
-import com.example.bookingStadium.dto.request.Detail.StadiumBookingDetailRequest;
-import com.example.bookingStadium.dto.response.Detail.StadiumBookingDetailResponse;
+
+import com.example.bookingStadium.dto.request.Detail.StadiumBookingDetailCreationRequest;
+import com.example.bookingStadium.dto.request.Detail.StadiumBookingDetailUpdateRequest;
+import com.example.bookingStadium.dto.response.StadiumBookingDetailResponse;
+import com.example.bookingStadium.entity.Booking;
+import com.example.bookingStadium.entity.Stadium;
 import com.example.bookingStadium.entity.StadiumBookingDetail;
+import com.example.bookingStadium.exception.AppException;
+import com.example.bookingStadium.exception.ErrorCode;
 import com.example.bookingStadium.mapper.StadiumBookingDetailMapper;
+import com.example.bookingStadium.repository.BookingRepository;
 import com.example.bookingStadium.repository.StadiumBookingDetailRepository;
-import jakarta.transaction.Transactional;
+import com.example.bookingStadium.repository.StadiumRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+
+import java.sql.Time;
+import java.time.Duration;
+import java.time.LocalTime;
 import java.util.List;
-import java.util.Optional;
+
 
 @Service
+@RequiredArgsConstructor
 public class StadiumBookingDetailService {
     @Autowired
     private StadiumBookingDetailRepository stadiumBookingDetailRepository;
@@ -20,50 +33,111 @@ public class StadiumBookingDetailService {
     @Autowired
     private StadiumBookingDetailMapper stadiumBookingDetailMapper;
 
-    public StadiumBookingDetailResponse createBookingDetail(StadiumBookingDetailRequest request) {
-        StadiumBookingDetail detail = stadiumBookingDetailMapper.toEntity(request);
-        StadiumBookingDetail savedDetail = stadiumBookingDetailRepository.save(detail);
-        return stadiumBookingDetailMapper.toResponse(savedDetail);
+    @Autowired
+    private BookingRepository bookingRepository;
+
+    @Autowired
+    private StadiumRepository stadiumRepository;
+
+
+    public StadiumBookingDetail createStadiumBookingDetail(StadiumBookingDetailCreationRequest request) {
+
+        Booking booking = bookingRepository.findById(request.getBookingId())
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_EXISTED));
+
+        double totalHours = calculateTotalHours(booking.getStartTime(), booking.getEndTime());
+
+        Stadium stadium = stadiumRepository.findById(request.getStadiumId())
+                .orElseThrow(() -> new AppException(ErrorCode.STADIUM_NOT_EXISTED));
+
+        // Lấy giá tiền sân từ stadiumId
+        double stadiumPrice = stadium.getPrice();
+
+        // Tính tổng tiền thuê sân
+        double totalPrice = calculateTotalPrice(stadiumPrice, totalHours);
+
+        StadiumBookingDetail stadiumBookingDetail = stadiumBookingDetailMapper.toStadiumBookingDetails(request);
+        stadiumBookingDetail.setBookingId(request.getBookingId());
+        stadiumBookingDetail.setTotalHours(totalHours);
+        stadiumBookingDetail.setPrice(totalPrice);
+
+        return stadiumBookingDetailRepository.save(stadiumBookingDetail);
     }
 
-    public List<StadiumBookingDetailResponse> getAllBookingDetails() {
-        List<StadiumBookingDetail> details = stadiumBookingDetailRepository.findAll();
-        return details.stream()
-                .map(stadiumBookingDetailMapper::toResponse)
-                .toList();
+    public List<StadiumBookingDetail> getStadiumBookingDetail(){
+        return stadiumBookingDetailRepository.findAll();
     }
 
-    public StadiumBookingDetailResponse getBookingDetailById(String bookingId, String stadiumId, int typeId) {
-        StadiumBookingDetail detail = stadiumBookingDetailRepository.findByBookingIdAndStadiumIdAndTypeId(bookingId, stadiumId, typeId)
-                .orElseThrow(() -> new RuntimeException("Booking detail not found"));
-        return stadiumBookingDetailMapper.toResponse(detail);
+    public StadiumBookingDetailResponse findStadiumBookingDetail(String stadiumBookingDetailId){
+        return stadiumBookingDetailMapper
+                .toStadiumBookingDetailResponse(stadiumBookingDetailRepository
+                        .findById(stadiumBookingDetailId)
+                        .orElseThrow(()-> new AppException(ErrorCode.BOOKING_DETAIL_NOT_EXISTED)));
     }
 
-    public List<StadiumBookingDetailResponse> getBookingDetailsByBookingId(String bookingId) {
-        List<StadiumBookingDetail> details = stadiumBookingDetailRepository.findByBookingId(bookingId);
-        return details.stream()
-                .map(stadiumBookingDetailMapper::toResponse)
-                .toList();
+    public StadiumBookingDetailResponse updateStadiumBookingDetail(String stadiumBookingDetailId
+            , StadiumBookingDetailUpdateRequest request){
+        StadiumBookingDetail stadiumBookingDetail = stadiumBookingDetailRepository.findById(stadiumBookingDetailId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_DETAIL_NOT_EXISTED));
+
+        String bookingId = stadiumBookingDetail.getBookingId();
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_EXISTED));
+
+        double totalHours = calculateTotalHours(booking.getStartTime(), booking.getEndTime());
+
+        Stadium stadium = stadiumRepository.findById(request.getStadiumId())
+                .orElseThrow(() -> new AppException(ErrorCode.STADIUM_NOT_EXISTED));
+
+        double totalPrice = calculateTotalPrice(totalHours, stadium.getPrice());
+
+        stadiumBookingDetailMapper.updateStadiumBookingDetail(stadiumBookingDetail, request);
+        stadiumBookingDetail.setTotalHours(totalHours);
+        stadiumBookingDetail.setPrice(totalPrice);
+
+        return stadiumBookingDetailMapper
+                .toStadiumBookingDetailResponse(stadiumBookingDetailRepository.save(stadiumBookingDetail));
     }
 
-    public StadiumBookingDetailResponse updateBookingDetail(String bookingId, String stadiumId, int typeId, StadiumBookingDetailRequest request) {
-        // Tìm bản ghi hiện tại
-        StadiumBookingDetail existingDetail = stadiumBookingDetailRepository.findByBookingIdAndStadiumIdAndTypeId(bookingId, stadiumId, typeId)
-                .orElseThrow(() -> new RuntimeException("Booking detail not found"));
-
-        // Cập nhật các trường cần thiết
-        existingDetail.setQuantity(request.getQuantity());
-        existingDetail.setDuration(request.getDuration());
-        existingDetail.setPrice(request.getPrice());
-
-        // Lưu bản ghi đã cập nhật
-        StadiumBookingDetail updatedDetail = stadiumBookingDetailRepository.save(existingDetail);
-        return stadiumBookingDetailMapper.toResponse(updatedDetail);
+    public void deleteStadiumBookingDetail(String stadiumBookingDetailId){
+        stadiumBookingDetailRepository.findById(stadiumBookingDetailId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_DETAIL_NOT_EXISTED));
+        stadiumBookingDetailRepository.deleteById(stadiumBookingDetailId);
     }
 
-    @Transactional
-    public void deleteBookingDetail(String bookingId, String stadiumId, int typeId) {
-        stadiumBookingDetailRepository.deleteByBookingIdAndStadiumIdAndTypeId(bookingId, stadiumId, typeId);
-        System.out.println("Booking Detail deleted successfully.");
+
+    public double calculateTotalHours(Time startTime, Time endTime){
+        if (startTime == null || endTime == null) {
+            return 0.0;
+        }
+
+        LocalTime start = startTime.toLocalTime();
+        LocalTime end = endTime.toLocalTime();
+
+        double totalMinutes = Duration.between(start, end).toMinutes(); // Lấy tổng số phút
+        return totalMinutes / 60; // Chuyển đổi thành giờ
+    }
+
+    public double calculateTotalPrice(double stadiumPrice, double totalHours) {
+        if (stadiumPrice == 0  || totalHours <= 0) {
+            return 0;
+        }
+        return stadiumPrice * totalHours;
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

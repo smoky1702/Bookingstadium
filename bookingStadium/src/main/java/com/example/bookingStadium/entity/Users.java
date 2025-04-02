@@ -32,4 +32,5 @@ public class Users {
     private LocalDate day_of_birth;
     private LocalDate date_created;
     private LocalDate date_updated;
+
 }

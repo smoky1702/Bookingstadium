@@ -3,7 +3,7 @@ package com.example.bookingStadium.service;
 
 import com.example.bookingStadium.dto.request.StadiumLocation.StadiumLocationCreationRequest;
 import com.example.bookingStadium.dto.request.StadiumLocation.StadiumLocationUpdateRequest;
-import com.example.bookingStadium.dto.response.StadiumLocation.StadiumLocationResponse;
+import com.example.bookingStadium.dto.response.StadiumLocationResponse;
 import com.example.bookingStadium.entity.Stadium_Location;
 import com.example.bookingStadium.exception.AppException;
 import com.example.bookingStadium.exception.ErrorCode;

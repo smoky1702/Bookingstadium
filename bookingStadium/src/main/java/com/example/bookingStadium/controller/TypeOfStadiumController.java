@@ -4,7 +4,7 @@ package com.example.bookingStadium.controller;
 import com.example.bookingStadium.dto.request.TypeOfStadium.TypeOfStadiumCreationRequest;
 import com.example.bookingStadium.dto.response.ApiResponse;
 import com.example.bookingStadium.dto.request.TypeOfStadium.TypeOfStadiumUpdateRequest;
-import com.example.bookingStadium.dto.response.TypeOfLocation.TypeOfStadiumResponse;
+import com.example.bookingStadium.dto.response.TypeOfStadiumResponse;
 import com.example.bookingStadium.entity.Type_Of_Stadium;
 import com.example.bookingStadium.service.TypeService;
 import jakarta.validation.Valid;

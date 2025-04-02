@@ -9,12 +9,7 @@ import lombok.Setter;
 @Setter
 @Table(name = "Roles")
 public class Roles {
-
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "role_id")
-    private int roleId;
-
-    @Column(name = "role_name", unique = true, nullable = false)
-    private String roleName;
+    private String roleId;
 }

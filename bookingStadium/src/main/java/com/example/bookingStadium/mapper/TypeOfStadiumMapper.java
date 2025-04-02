@@ -2,7 +2,7 @@ package com.example.bookingStadium.mapper;
 
 import com.example.bookingStadium.dto.request.TypeOfStadium.TypeOfStadiumCreationRequest;
 import com.example.bookingStadium.dto.request.TypeOfStadium.TypeOfStadiumUpdateRequest;
-import com.example.bookingStadium.dto.response.TypeOfLocation.TypeOfStadiumResponse;
+import com.example.bookingStadium.dto.response.TypeOfStadiumResponse;
 import com.example.bookingStadium.entity.Type_Of_Stadium;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;

@@ -14,6 +14,16 @@ public enum ErrorCode {
     EMAIL_NOT_EXISTED(1010, "User not existed"),
     ROLE_NOT_EXISTED(1011, "Role not existed"),
     UNAUTHENTICATED(1012, "Unauthenticated"),
+    STADIUM_NOT_EXISTED(1013, "Stadium not existed"),
+    WORK_SCHEDULE_EXISTED(1014, "Work schedule already exists"),
+    WORK_SCHEDULE_NOT_EXISTED(1014, "Work schedule not exists"),
+    PAYMENT_METHOD_EXISTED(1015, "Payment method exists"),
+    PAYMENT_METHOD_NOT_EXISTED(1016, "Payment method not exists"),
+    EVALUATION_NOT_EXISTED(1017, "Evaluation not exists"),
+    BOOKING_NOT_EXISTED(1018, "Booking not exists"),
+    BOOKING_DETAIL_NOT_EXISTED(1019, "Booking detail not exists"),
+    BILL_NOT_EXISTED(1020,"Bill not exists"),
+    FORBIDDEN(1021,"FORBIDDEN"),
             ;
     private int code;
     private String message;

@@ -4,7 +4,7 @@ package com.example.bookingStadium.service;
 
 import com.example.bookingStadium.dto.request.TypeOfStadium.TypeOfStadiumCreationRequest;
 import com.example.bookingStadium.dto.request.TypeOfStadium.TypeOfStadiumUpdateRequest;
-import com.example.bookingStadium.dto.response.TypeOfLocation.TypeOfStadiumResponse;
+import com.example.bookingStadium.dto.response.TypeOfStadiumResponse;
 import com.example.bookingStadium.entity.Type_Of_Stadium;
 import com.example.bookingStadium.exception.AppException;
 import com.example.bookingStadium.exception.ErrorCode;
@@ -52,7 +52,7 @@ public class TypeService {
     }
 
     public void deteleType(int typeId){
-        Type_Of_Stadium type = typeRepository.findById(typeId).orElseThrow(()->
+        typeRepository.findById(typeId).orElseThrow(()->
                 new AppException(ErrorCode.TYPE_OF_STADIUM_NOT_EXISTED));
         typeRepository.deleteById(typeId);
     }

@@ -1,57 +1,58 @@
 package com.example.bookingStadium.service;
 
-import com.example.bookingStadium.dto.request.Booking.BookingRequest;
-import com.example.bookingStadium.dto.request.Stadium.BookingStatus;
-import com.example.bookingStadium.dto.response.Booking.BookingResponse;
+import com.example.bookingStadium.dto.request.Booking.BookingCreationRequest;
+import com.example.bookingStadium.dto.request.Booking.BookingUpdateRequest;
+import com.example.bookingStadium.dto.response.BookingResponse;
 import com.example.bookingStadium.entity.Booking;
-import com.example.bookingStadium.dto.request.Stadium.StadiumStatus; // Đảm bảo import đúng enum
+import com.example.bookingStadium.exception.AppException;
+import com.example.bookingStadium.exception.ErrorCode;
+import com.example.bookingStadium.mapper.StadiumBookingMapper;
 import com.example.bookingStadium.repository.BookingRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.sql.Timestamp;
+import java.util.List;
 
 @Service
 public class BookingService {
     @Autowired
     private BookingRepository bookingRepository;
 
-    public BookingResponse bookStadium(BookingRequest request) {
-        // Kiểm tra giá trị của dateOfBooking
-        if (request.getDateOfBooking() == null) {
-            throw new IllegalArgumentException("Date of booking cannot be null");
-        }
+    @Autowired
+    private StadiumBookingMapper stadiumBookingMapper;
 
-        // Kiểm tra giá trị của startTime và endTime
-        if (request.getStartTime() == null || request.getEndTime() == null) {
-            throw new IllegalArgumentException("Start time and end time cannot be null");
-        }
+    public Booking createBooking(BookingCreationRequest request){
+        Booking booking = stadiumBookingMapper.toBooking(request);
+        return bookingRepository.save(booking);
+    }
 
-        // Kiểm tra rằng thời gian bắt đầu phải trước thời gian kết thúc
-        if (request.getStartTime().after(request.getEndTime())) {
-            throw new IllegalArgumentException("Start time must be before end time");
-        }
+    public List<Booking> getBooking(){
+        return bookingRepository.findAll();
+    }
 
-        Booking booking = new Booking();
-        booking.setBookingId(java.util.UUID.randomUUID().toString());
-        booking.setUserId(request.getUserId());
-        booking.setDateOfBooking(request.getDateOfBooking());
-        booking.setStartTime(request.getStartTime());
-        booking.setEndTime(request.getEndTime());
-        booking.setStatus(BookingStatus.PENDING);
-        booking.setNumberOfBookings(request.getNumberOfBookings());
-        booking.setDateCreated(new Timestamp(System.currentTimeMillis()));
+    public BookingResponse findBooking(String bookingId){
+        return stadiumBookingMapper.toBookingMapper(bookingRepository.findById(bookingId)
+                .orElseThrow(()-> new AppException(ErrorCode.BOOKING_NOT_EXISTED)));
+    }
 
-        Booking savedBooking = bookingRepository.save(booking);
+    public BookingResponse updateBooking(String bookingId, BookingUpdateRequest request){
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_EXISTED));
+        stadiumBookingMapper.updateBooking(booking, request);
+        return stadiumBookingMapper.toBookingMapper(bookingRepository.save(booking));
+    }
 
-        return new BookingResponse(
-                savedBooking.getBookingId(),
-                savedBooking.getUserId(),
-                savedBooking.getDateOfBooking(),
-                savedBooking.getStartTime(),
-                savedBooking.getEndTime(),
-                savedBooking.getStatus().name(),
-                savedBooking.getNumberOfBookings()
-        );
+    public void deleteBooking(String bookingId){
+        bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_EXISTED));
+        bookingRepository.deleteById(bookingId);
     }
 }
+
+
+
+
+
+
+
+

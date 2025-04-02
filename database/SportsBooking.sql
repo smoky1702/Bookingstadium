@@ -1,18 +1,22 @@
--- CREATE DATABASE SportsBookingtype_idtype_id;
+-- CREATE DATABASE SportsBooking;
 -- USE SportsBooking;
--- CREATE DATABASE bookingdb;
--- USE bookingdb;
+-- CREATE DATABASE bookingdb4;
+-- USE bookingdb4;
 
 -- Bảng quản lý vai trò
+-- CREATE TABLE Roles (
+--     role_id INT PRIMARY KEY AUTO_INCREMENT,
+--     role_name VARCHAR(50) NOT NULL
+-- );
+
 CREATE TABLE Roles (
-    role_id INT PRIMARY KEY AUTO_INCREMENT,
-    role_name VARCHAR(50) NOT NULL
+    role_id VARCHAR(50) PRIMARY KEY
 );
 
 -- Bảng người dùng
 CREATE TABLE Users (
     user_id CHAR(36) PRIMARY KEY,
-    role_id INT,
+    role_id varchar(50),
     email VARCHAR(100) UNIQUE NOT NULL,
     firstname VARCHAR(100) NOT NULL,
     lastname VARCHAR(100) NOT NULL,
@@ -43,41 +47,48 @@ CREATE TABLE Type_Of_Stadium (
     type_name VARCHAR(100) NOT NULL
 );
 
--- Bảng chi tiết sân tại địa điểm
--- CREATE TABLE Stadium_Details (
---     location_id CHAR(36),
---     type_id INT,
---     quantity INT NOT NULL,
---     price DECIMAL(10,2) NOT NULL,
---     PRIMARY KEY (location_id, type_id),
---     FOREIGN KEY (location_id) REFERENCES Stadium_Location(location_id),
---     FOREIGN KEY (type_id) REFERENCES Type_Of_Stadium(type_id)
--- );
+
+CREATE TABLE Stadium (
+    stadium_id CHAR(36) PRIMARY KEY,
+    location_id CHAR(36) NOT NULL,  -- Liên kết đến địa điểm
+    type_id INT NOT NULL,           -- Liên kết đến loại sân
+    stadium_name VARCHAR(100) NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    status ENUM('AVAILABLE', 'MAINTENANCE', 'BOOKED') DEFAULT 'AVAILABLE',
+    date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    description TEXT,
+    FOREIGN KEY (location_id) REFERENCES Stadium_Location(location_id),
+    FOREIGN KEY (type_id) REFERENCES Type_Of_Stadium(type_id) 
+);
 
 -- Bảng đặt sân
 CREATE TABLE Stadium_Booking (
     stadium_booking_id CHAR(36) PRIMARY KEY,
     user_id CHAR(36),
+    location_id CHAR(36), -- Thêm thông tin địa điểm sân
     date_of_booking DATE NOT NULL,
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
     status ENUM('PENDING', 'CONFIRMED', 'CANCELLED') DEFAULT 'PENDING',
-    number_of_bookings INT NOT NULL,
     date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES Users(user_id)
+    CHECK (start_time < end_time),
+    FOREIGN KEY (user_id) REFERENCES Users(user_id),
+    FOREIGN KEY (location_id) REFERENCES Stadium_Location(location_id)
 );
 
 -- Bảng chi tiết đặt sân
 CREATE TABLE Stadium_Booking_Details (
+    stadium_booking_details_id CHAR(36) PRIMARY KEY,
     stadium_booking_id CHAR(36),
-    location_id CHAR(36),
+    type_id INT, -- Thêm type_id để xác định loại sân
     stadium_id CHAR(36),
-    duration INT NOT NULL,
+    total_hours INT,
     price DECIMAL(10,2) NOT NULL,
-    PRIMARY KEY (stadium_booking_id, stadium_id),
     FOREIGN KEY (stadium_booking_id) REFERENCES Stadium_Booking(stadium_booking_id),
-    FOREIGN KEY (location_id) REFERENCES Stadium_Location(location_id)
+    FOREIGN KEY (stadium_id) REFERENCES Stadium(stadium_id),
+    FOREIGN KEY (type_id) REFERENCES Type_Of_Stadium(type_id) -- Tham chiếu đến bảng loại sân
 );
+
 
 -- Bảng sân vận động
 -- CREATE TABLE Stadium (
@@ -93,18 +104,7 @@ CREATE TABLE Stadium_Booking_Details (
 --     FOREIGN KEY (type_id) REFERENCES Type_Of_Stadium(type_id)
 -- );
 
-CREATE TABLE Stadium (
-    stadium_id CHAR(36) PRIMARY KEY,
-    location_id CHAR(36) NOT NULL,  -- Liên kết đến địa điểm
-    type_id INT NOT NULL,           -- Liên kết đến loại sân
-    stadium_name VARCHAR(100) NOT NULL,
-    price DECIMAL(10,2) NOT NULL,
-    status ENUM('AVAILABLE', 'MAINTENANCE', 'BOOKED') DEFAULT 'AVAILABLE',
-    date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    description TEXT,
-    FOREIGN KEY (location_id) REFERENCES Stadium_Location(location_id),
-    FOREIGN KEY (type_id) REFERENCES Type_Of_Stadium(type_id) 
-);
+
 
 
 -- Bảng phương thức thanh toán
@@ -116,17 +116,18 @@ CREATE TABLE Payment_Method (
 -- Bảng hóa đơn
 CREATE TABLE Bill (
     bill_id CHAR(36) PRIMARY KEY,
-    stadium_booking_id CHAR(36),
-    stadium_id CHAR(36),
+    stadium_booking_id CHAR(36),  -- Thay vì stadium_booking_details_id
     payment_method_id INT,
     user_id CHAR(36),
-    price DECIMAL(10,2) NOT NULL,
+    final_price DECIMAL(10,2) NOT NULL CHECK (final_price >= 0),
     status ENUM('PAID', 'UNPAID', 'CANCELLED') DEFAULT 'UNPAID',
     date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    date_paid TIMESTAMP NULL, -- Thêm thời gian thanh toán
     FOREIGN KEY (stadium_booking_id) REFERENCES Stadium_Booking(stadium_booking_id),
     FOREIGN KEY (payment_method_id) REFERENCES Payment_Method(payment_method_id),
     FOREIGN KEY (user_id) REFERENCES Users(user_id)
 );
+
 
 
 

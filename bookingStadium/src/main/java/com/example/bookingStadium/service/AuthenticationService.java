@@ -104,7 +104,7 @@ public class AuthenticationService {
     }
 
     private String buildScope(Users user) {
-        return user.getRole().getRoleName().toUpperCase();
+        return user.getRole().getRoleId().toUpperCase();
     }
 
 }
