@@ -1,7 +1,7 @@
 -- CREATE DATABASE SportsBooking;
 -- USE SportsBooking;
--- CREATE DATABASE bookingdb4;
--- USE bookingdb4;
+-- CREATE DATABASE bookingdb3;
+-- USE bookingdb3;
 
 -- Bảng quản lý vai trò
 -- CREATE TABLE Roles (
@@ -145,12 +145,12 @@ CREATE TABLE Bill (
 CREATE TABLE Evaluation (
     evaluation_id CHAR(36) PRIMARY KEY,
     user_id CHAR(36),
-    location_id CHAR(36),
+    stadium_id CHAR(36),
     rating_score DECIMAL(2,1) CHECK (rating_score >= 0 AND rating_score <= 5),
     comment TEXT,
     date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES Users(user_id),
-    FOREIGN KEY (location_id) REFERENCES Stadium_Location(location_id)
+    FOREIGN KEY (stadium_id) REFERENCES Stadium(stadium_id)
 );
 
 -- Bảng thông báo
@@ -195,8 +195,8 @@ CREATE TABLE Promotion (
 
 CREATE TABLE Image (
     image_id CHAR(36) PRIMARY KEY,
-    location_id CHAR(36),
+    stadium_id CHAR(36),
     image_url TEXT NOT NULL,
     date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (location_id) REFERENCES Stadium_Location(location_id)
+    FOREIGN KEY (stadium_id) REFERENCES Stadium(stadium_id)
 );

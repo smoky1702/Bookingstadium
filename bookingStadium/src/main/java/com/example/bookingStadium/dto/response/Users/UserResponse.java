@@ -14,7 +14,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class UserResponse {
-    private Roles role_id;
+    private String role_id;
     private String email;
     private String firstname;
     private String lastname;

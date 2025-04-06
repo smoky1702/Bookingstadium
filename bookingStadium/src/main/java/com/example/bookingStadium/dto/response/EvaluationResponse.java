@@ -15,8 +15,8 @@ public class EvaluationResponse {
     @JsonProperty("user_id")
     private String userId;
 
-    @JsonProperty("location_id")
-    private String locationId;
+    @JsonProperty("stadium_id")
+    private String stadiumIds;
 
     @JsonProperty("rating_score")
     private BigDecimal ratingScore;

@@ -2,6 +2,7 @@ package com.example.bookingStadium.service;
 
 import com.example.bookingStadium.dto.request.Users.UserCreationRequest;
 import com.example.bookingStadium.dto.request.Users.UserUpdateRequest;
+import com.example.bookingStadium.dto.request.Users.UserUpdateRoleRequest;
 import com.example.bookingStadium.dto.response.Users.UserResponse;
 import com.example.bookingStadium.entity.Roles;
 import com.example.bookingStadium.entity.Users;
@@ -63,7 +64,8 @@ public class UserService {
         Users currentUser = userRepository.findByEmail(currentUserEmail)
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
 
-        if (!currentUser.getRole().getRoleId().equalsIgnoreCase("ADMIN") && !currentUser.getUser_id().equals(id)) {
+        if (!currentUser.getRole().getRoleId().equalsIgnoreCase("ADMIN")
+                && !currentUser.getUser_id().equals(id)) {
             throw new AppException(ErrorCode.FORBIDDEN);
         }
 
@@ -71,7 +73,18 @@ public class UserService {
                 .orElseThrow(()-> new AppException(ErrorCode.USER_NOT_EXISTED)));
     }
 
+
     public UserResponse updateUser(String user_Id, UserUpdateRequest request){
+        String currentUserEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        Users currentUser = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
+
+        if (!currentUser.getUser_id().equals(user_Id)) {
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+
+
         Users user = userRepository.findById(user_Id)
                 .orElseThrow(()-> new AppException(ErrorCode.USER_NOT_EXISTED));
         userMapper.updateUser(user, request);
@@ -84,5 +97,13 @@ public class UserService {
         userRepository.findById(user_Id)
                 .orElseThrow(()-> new AppException(ErrorCode.USER_NOT_EXISTED));
         userRepository.deleteById(user_Id);
+    }
+
+    public UserResponse updateRole(String userId, UserUpdateRoleRequest request){
+        Users users = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        users.setRole(request.getRole());
+        return userMapper.toUserResponse(userRepository.save(users));
     }
 }

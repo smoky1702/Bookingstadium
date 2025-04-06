@@ -1,6 +1,7 @@
 package com.example.bookingStadium.controller;
 
 
+import com.example.bookingStadium.dto.request.Users.UserUpdateRoleRequest;
 import com.example.bookingStadium.dto.response.ApiResponse;
 import com.example.bookingStadium.dto.request.Users.UserCreationRequest;
 import com.example.bookingStadium.dto.request.Users.UserUpdateRequest;
@@ -43,19 +44,13 @@ public class UserController {
     }
 
     @GetMapping("/{userId}")
-//    public UserResponse findUser(@PathVariable("userId") String userId){
-//        return userService.findUser(userId);
-//    }
     ApiResponse<UserResponse> findUser(@PathVariable("userId") String userId){
         ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
         apiResponse.setResult(userService.findUser(userId));
         return apiResponse;
     }
 
-    @PutMapping("/{userId}") //???
-//    public UserResponse updateUser(@PathVariable String userId, @RequestBody UserUpdateRequest request){
-//        return userService.updateUser(userId, request);
-//    }
+    @PutMapping("/{userId}")
     ApiResponse<UserResponse> updateUser(@PathVariable("userId") String userId
             , @RequestBody UserUpdateRequest request){
         ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
@@ -69,6 +64,14 @@ public class UserController {
         return ApiResponse.<String>builder()
                 .result("User has been deleted")
                 .build();
+    }
+
+    @PutMapping("/role/{userId}")
+    ApiResponse<UserResponse> updateRole(@PathVariable("userId") String userId
+            , @RequestBody UserUpdateRoleRequest request){
+        ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(userService.updateRole(userId, request));
+        return apiResponse;
     }
 }
 

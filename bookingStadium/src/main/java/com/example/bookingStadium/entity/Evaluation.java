@@ -21,8 +21,8 @@ public class Evaluation {
     @Column(name = "user_id")
     private String userId;
 
-    @Column(name = "location_id")
-    private String locationId;
+    @Column(name = "stadium_id")
+    private String stadiumId;
 
     @Column(name = "rating_score", precision = 2, scale = 1, nullable = false)
     private BigDecimal ratingScore;

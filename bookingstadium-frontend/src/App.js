@@ -10,6 +10,7 @@ import StadiumDetailPage from './pages/StadiumDetailPage/StadiumDetailPage';
 import UserProfilePage from './pages/UserProfilePage/UserProfilePage';
 import BookingDetailPage from './pages/BookingDetailPage/BookingDetailPage';
 import BillPage from './pages/BillPage/BillPage';
+import EvaluationPage from './pages/EvaluationPage/EvaluationPage';
 import PrivacyPolicy from './landingpage/PrivacyPolicy';
 import RefundPolicy from './landingpage/RefundPolicy';
 import CustomerPolicy from './landingpage/CustomerPolicy';
@@ -31,6 +32,7 @@ function App() {
           <Route path="/profile" element={<UserProfilePage />} />
           <Route path="/booking/:bookingId" element={<BookingDetailPage />} />
           <Route path="/bills" element={<BillPage />} />
+          <Route path="/danh-gia" element={<EvaluationPage />} />
           <Route path="/chinh-sach-bao-mat" element={<PrivacyPolicy />} />
           <Route path="/chinh-sach-huy-doi-tra" element={<RefundPolicy />} />
           <Route path="/chinh-sach-khach-hang" element={<CustomerPolicy />} />

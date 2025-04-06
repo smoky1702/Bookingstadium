@@ -11,8 +11,8 @@ public class EvaluationCreationRequest {
     @JsonProperty("user_id")
     private String userId;
 
-    @JsonProperty("location_id")
-    private String locationId;
+    @JsonProperty("stadium_id")
+    private String stadiumId;
 
     @JsonProperty("rating_score")
     private BigDecimal ratingScore;

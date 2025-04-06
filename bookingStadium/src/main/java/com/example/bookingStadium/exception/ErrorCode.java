@@ -24,6 +24,7 @@ public enum ErrorCode {
     BOOKING_DETAIL_NOT_EXISTED(1019, "Booking detail not exists"),
     BILL_NOT_EXISTED(1020,"Bill not exists"),
     FORBIDDEN(1021,"FORBIDDEN"),
+    IMAGE_NOT_FOUND(1022,"Image not found"),
             ;
     private int code;
     private String message;

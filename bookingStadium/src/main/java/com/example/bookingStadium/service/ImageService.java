@@ -3,6 +3,8 @@ package com.example.bookingStadium.service;
 
 
 import com.example.bookingStadium.entity.Image;
+import com.example.bookingStadium.exception.AppException;
+import com.example.bookingStadium.exception.ErrorCode;
 import com.example.bookingStadium.repository.ImageRepository;
 import com.example.bookingStadium.repository.StadiumRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,8 +61,7 @@ public class ImageService {
         image.setImageUrl(fileUrl);
         imageRepository.save(image);
 
-        return fileUrl; // Trả về URL của file
-//        return imageRepository.save(image);
+        return fileUrl;
     }
 
     public void deleteImage(String imageId) {
@@ -82,11 +83,42 @@ public class ImageService {
 
     public Image findImage(String imageId) {
         return imageRepository.findById(imageId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ảnh với ID: " + imageId));
+                .orElseThrow(() -> new AppException(ErrorCode.IMAGE_NOT_FOUND));
     }
 
     public List<Image> getAllImages() {
         return imageRepository.findAll();
+    }
+
+    public String updateImage(String imageId, MultipartFile newFile) throws IOException {
+        // Kiểm tra nếu file rỗng
+        if (newFile.isEmpty()) {
+            throw new IllegalArgumentException("File mới không được để trống!");
+        }
+
+        // Tìm ảnh cũ trong DB
+        Image image = imageRepository.findById(imageId)
+                .orElseThrow(() -> new AppException(ErrorCode.IMAGE_NOT_FOUND));
+
+        // Xóa file ảnh cũ trên server
+        String oldImagePath = uploadDir + "/" + Paths.get(image.getImageUrl()).getFileName();
+        try {
+            Files.deleteIfExists(Paths.get(oldImagePath));
+        } catch (IOException e) {
+            throw new RuntimeException("Lỗi khi xóa file ảnh cũ: " + oldImagePath, e);
+        }
+
+        // Lưu ảnh mới vào server
+        String newFileName = UUID.randomUUID() + "_" + newFile.getOriginalFilename();
+        Path newFilePath = Paths.get(uploadDir).resolve(newFileName);
+        Files.copy(newFile.getInputStream(), newFilePath);
+
+        // Cập nhật đường dẫn mới vào DB
+        String newFileUrl = "/uploads/" + newFileName;
+        image.setImageUrl(newFileUrl);
+        imageRepository.save(image);
+
+        return newFileUrl;
     }
 
 

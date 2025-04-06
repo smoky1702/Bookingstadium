@@ -9,7 +9,7 @@ import com.example.bookingStadium.exception.AppException;
 import com.example.bookingStadium.exception.ErrorCode;
 import com.example.bookingStadium.mapper.EvaluationMapper;
 import com.example.bookingStadium.repository.EvaluationRepository;
-import com.example.bookingStadium.repository.StadiumLocationRepository;
+import com.example.bookingStadium.repository.StadiumRepository;
 import com.example.bookingStadium.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -28,7 +28,7 @@ public class EvaluationService {
     private UserRepository userRepository;
 
     @Autowired
-    private StadiumLocationRepository stadiumLocationRepository;
+    private StadiumRepository stadiumRepository;
 
     public Evaluation createEvaluation(EvaluationCreationRequest request){
         if(!userRepository.existsById(request.getUserId())){
@@ -36,8 +36,8 @@ public class EvaluationService {
             throw new AppException(ErrorCode.USER_NOT_EXISTED);
         }
 
-        if (!stadiumLocationRepository.existsById(request.getLocationId())) {
-            throw new AppException(ErrorCode.STADIUM_LOCATION_NOT_EXISTED);
+        if (!stadiumRepository.existsById(request.getStadiumId())) {
+            throw new AppException(ErrorCode.STADIUM_NOT_EXISTED);
         }
 
         Evaluation evaluation = evaluationMapper.toEvaluation(request);

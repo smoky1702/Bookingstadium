@@ -19,20 +19,8 @@ public class ImageController {
     @Autowired
     private ImageService imageService;
 
-//    @PostMapping
-//    ApiResponse<String> uploadIsmage(@RequestParam("locationId") String locationId
-//            ,@RequestParam("imageUrl") MultipartFile file){
-//        ApiResponse<String> apiResponse = new ApiResponse<>();
-//        return apiResponse.setResult(imageService.uploadImage(file, locationId));
-//        try {
-//            String imageUrl = imageService.uploadImage(file, locationId);
-//            return apiResponse
-//        } catch (IOException e) {
-//            return ResponseEntity.internalServerError().body("Upload failed: " + e.getMessage());
-//        }
-//    }
     @PostMapping("/upload")
-    public ResponseEntity<String> uploadImage(@RequestParam("locationId") String locationId
+    public ResponseEntity<String> uploadImage(@RequestParam("stadiumId") String locationId
             ,@RequestParam("imageUrl") MultipartFile file){
         try {
             String imageUrl = imageService.uploadImage(file, locationId);
@@ -55,10 +43,18 @@ public class ImageController {
         return apiResponse;
     }
 
-    @GetMapping("/imageId")
-    ApiResponse<Image> findImage(@PathVariable("/imageId") String imageId){
+    @GetMapping("/{imageId}")
+    ApiResponse<Image> findImage(@PathVariable("imageId") String imageId){
         ApiResponse<Image> apiResponse = new ApiResponse<>();
         apiResponse.setResult(imageService.findImage(imageId));
+        return apiResponse;
+    }
+
+    @PutMapping("/update/{imageId}")
+    public ApiResponse<String> updateImage(@PathVariable("imageId") String imageId,
+                                           @RequestParam("file") MultipartFile newFile) throws IOException {
+        ApiResponse<String> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(imageService.updateImage(imageId, newFile));
         return apiResponse;
     }
 }

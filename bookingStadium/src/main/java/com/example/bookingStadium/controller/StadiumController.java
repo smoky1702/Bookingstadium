@@ -29,7 +29,8 @@ public class StadiumController {
 
     @GetMapping
     ApiResponse<List<Stadium>> getStadium(){
-        ApiResponse<List<Stadium>> apiResponse = new ApiResponse<>();
+        List<Stadium> stadiumList = stadiumService.getStadium();
+        ApiResponse<List<Stadium>> apiResponse = new ApiResponse<>(stadiumList);
         return apiResponse;
     }
 
@@ -41,7 +42,7 @@ public class StadiumController {
     }
 
     @PutMapping("/{stadiumId}")
-    ApiResponse<StadiumReponse> updateStadium(@PathVariable("/{stadiumId}") String stadiumId,
+    ApiResponse<StadiumReponse> updateStadium(@PathVariable("stadiumId") String stadiumId,
                                               @RequestBody StadiumUpdateRequest request){
         ApiResponse<StadiumReponse> apiResponse = new ApiResponse<>();
         apiResponse.setResult(stadiumService.updateStadium(stadiumId, request));
@@ -49,9 +50,12 @@ public class StadiumController {
     }
 
     @DeleteMapping("/{stadiumId}")
-    public String deleteStadium(@PathVariable("/{stadiumId}") String stadiumId){
+    public ApiResponse<String> deleteStadium(@PathVariable("stadiumId") String stadiumId){
         stadiumService.detele(stadiumId);
-        return "Stadium has been deleted";
+        return ApiResponse.<String>builder()
+                .code(200)
+                .result("Stadium has been deleted")
+                .build();
     }
 }
 

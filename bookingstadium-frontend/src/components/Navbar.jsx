@@ -138,6 +138,15 @@ const Navbar = () => {
               </Link>
             </li>
             <li className="navbar-item">
+              <Link 
+                to="/danh-gia" 
+                className={location.pathname === '/danh-gia' ? "navbar-link active" : "navbar-link"}
+                onClick={(e) => handleNavLinkClick(e, "/danh-gia")}
+              >
+                Đánh giá
+              </Link>
+            </li>
+            <li className="navbar-item">
               <a 
                 href="#footer" 
                 className="navbar-link"
