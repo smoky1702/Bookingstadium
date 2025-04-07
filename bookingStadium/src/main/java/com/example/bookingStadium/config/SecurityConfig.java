@@ -46,7 +46,7 @@ public class SecurityConfig {
                         // PUBLIC API (ai cũng truy cập được)
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST, PUBLIC_ENDPOINTS).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/type", "/PaymentMethod", "/location", "/stadium", "/images", "/WorkSchedule", "/evaluation", "/evaluation/{evaluationId}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/type", "/PaymentMethod", "/location", "/stadium", "/stadium/{stadiumId}", "/images", "/WorkSchedule", "/evaluation", "/evaluation/{evaluationId}").permitAll()
                         // Cho phép truy cập thư mục uploads không cần xác thực
                         .requestMatchers("/uploads/**").permitAll()
 

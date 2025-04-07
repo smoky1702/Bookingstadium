@@ -823,11 +823,19 @@ const StadiumListPage = () => {
             <img
               src={imageUrl}
               alt={stadium.stadiumName || stadium.name}
+              onError={(e) => {
+                // Xử lý lỗi khi tải hình ảnh
+                console.log(`>> Lỗi khi tải hình ảnh cho sân ${stadium.stadiumId || stadium.id}`);
+                e.target.onerror = null; // Tránh vòng lặp vô hạn
+                e.target.parentNode.classList.add('no-image');
+                e.target.style.display = 'none';
+              }}
             />
           ) : (
             <div className="no-image-placeholder"></div>
           )}
         </div>
+        
         <div className="stadium-info">
           <h3>{stadium.stadiumName || stadium.name}</h3>
           
@@ -865,7 +873,7 @@ const StadiumListPage = () => {
           </div>
           
           <div className="stadium-actions">
-            <button className="booking-btn" onClick={() => navigate(`/stadium/${stadium.stadiumId || stadium.id}`)}>
+            <button className="booking-btn" onClick={() => navigate(`/san/${stadium.stadiumId || stadium.id}`)}>
               <FontAwesomeIcon icon={faInfoCircle} className="booking-icon" />
               Xem chi tiết
             </button>

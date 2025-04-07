@@ -11,20 +11,44 @@ const apiClient = axios.create({
   }
 });
 
+// Danh sách các endpoint công khai không cần xác thực
+const publicEndpoints = [
+  '/stadium',
+  '/type', 
+  '/location',
+  '/images',
+  '/evaluation'
+];
+
 // Interceptor thêm token và log request
 apiClient.interceptors.request.use(
   (config) => {
     console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`);
-    console.log(`[API Request] Full URL: ${API_URL}${config.url}`);
     
-    // Thống nhất dùng một tên key token 
-    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-      console.log('[API Request] Token found and attached to request');
+    // Kiểm tra xem URL hiện tại có phải là endpoint công khai không
+    const isPublicEndpoint = publicEndpoints.some(endpoint => {
+      // Kiểm tra cả endpoint gốc và endpoint có ID
+      const isBaseEndpoint = config.url.startsWith(endpoint);
+      const isDetailEndpoint = new RegExp(`^${endpoint}/\\d+$`).test(config.url);
+      return (isBaseEndpoint || isDetailEndpoint) && config.method?.toLowerCase() === 'get';
+    });
+
+    console.log(`[API Request] URL: ${config.url}`);
+    console.log(`[API Request] Is public endpoint: ${isPublicEndpoint}`);
+    
+    // Chỉ đính kèm token nếu không phải là endpoint công khai GET
+    if (!isPublicEndpoint) {
+      const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+      if (token) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+        console.log('[API Request] Token attached');
+      } else {
+        console.log('[API Request] No token found');
+      }
     } else {
-      console.log('[API Request] No token found in localStorage');
+      console.log('[API Request] Public endpoint - no token needed');
     }
+    
     return config;
   },
   (error) => {
@@ -393,12 +417,67 @@ const evaluationAPI = {
   
   // Lấy danh sách đánh giá
   getEvaluations: () => {
-    console.log('Gọi API đánh giá thông qua proxy');
-    return apiClient.get('/evaluation');
+    console.log('[evaluationAPI] Gọi API lấy tất cả đánh giá');
+    return apiClient.get('/evaluation').then(
+      (response) => {
+        console.log('[evaluationAPI] Thành công - Lấy tất cả đánh giá:', response.data);
+        return response;
+      },
+      (error) => {
+        console.error('[evaluationAPI] Lỗi - Lấy tất cả đánh giá:', error.message);
+        // Thử lại với URL thay thế
+        console.log('[evaluationAPI] Thử lại với URL thay thế /evaluations');
+        return apiClient.get('/evaluations').then(
+          (response) => {
+            console.log('[evaluationAPI] Thành công - Lấy tất cả đánh giá (URL thay thế):', response.data);
+            return response;
+          },
+          (altError) => {
+            console.error('[evaluationAPI] Lỗi - Lấy tất cả đánh giá (URL thay thế):', altError.message);
+            return Promise.reject(altError);
+          }
+        );
+      }
+    );
   },
   
   // Lấy tt đánh giá theo ID
   getEvaluationById: (evaluationId) => apiClient.get(`/evaluation/${evaluationId}`),
+  
+  // Lấy đánh giá theo ID sân
+  getEvaluationsByStadiumId: (stadiumId) => {
+    console.log(`[evaluationAPI] Gọi API lấy đánh giá cho sân có ID: ${stadiumId}`);
+    
+    // Lấy tất cả đánh giá và sau đó lọc theo stadiumId ở phía client
+    return apiClient.get('/evaluation').then(response => {
+      console.log('[evaluationAPI] Đã nhận response từ /evaluation');
+      
+      // Kiểm tra cấu trúc dữ liệu
+      if (response.data && response.data.result && Array.isArray(response.data.result)) {
+        // Lọc các đánh giá có stadiumId trùng khớp
+        const filteredEvaluations = response.data.result.filter(evaluation => 
+          evaluation.stadiumId == stadiumId || evaluation.stadium_id == stadiumId
+        );
+        console.log(`[evaluationAPI] Đã lọc được ${filteredEvaluations.length} đánh giá cho sân ID ${stadiumId}`);
+        
+        // Thay thế response.data.result bằng dữ liệu đã lọc
+        const newResponse = { ...response, data: { ...response.data, result: filteredEvaluations } };
+        return newResponse;
+      } else if (response.data && Array.isArray(response.data)) {
+        // Trường hợp response.data là một mảng trực tiếp
+        const filteredEvaluations = response.data.filter(evaluation => 
+          evaluation.stadiumId == stadiumId || evaluation.stadium_id == stadiumId
+        );
+        console.log(`[evaluationAPI] Đã lọc được ${filteredEvaluations.length} đánh giá cho sân ID ${stadiumId}`);
+        
+        // Tạo cấu trúc response mới
+        const newResponse = { ...response, data: { result: filteredEvaluations } };
+        return newResponse;
+      }
+      
+      return response;
+    });
+  },
   
   // Cập nhật đánh giá
   updateEvaluation: (evaluationId, evaluationData) => apiClient.put(`/evaluation/${evaluationId}`, evaluationData),

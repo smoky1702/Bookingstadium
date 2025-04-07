@@ -320,19 +320,6 @@ const OwnerHomePage = () => {
                   
                   <div className="useful-link-card">
                     <div className="link-icon">
-                      <i className="fas fa-star"></i>
-                    </div>
-                    <div className="link-content">
-                      <h3>Đánh giá</h3>
-                      <p>Xem đánh giá từ khách hàng</p>
-                      <Link to="/danh-gia" className="link-button">
-                        Xem đánh giá
-                      </Link>
-                    </div>
-                  </div>
-                  
-                  <div className="useful-link-card">
-                    <div className="link-icon">
                       <i className="fas fa-chart-line"></i>
                     </div>
                     <div className="link-content">

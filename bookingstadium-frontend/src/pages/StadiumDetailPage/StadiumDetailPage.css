@@ -7,6 +7,12 @@
     padding: 40px 0 60px;
   }
   
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 15px;
+  }
+  
   .breadcrumbs {
     display: flex;
     align-items: center;
@@ -40,8 +46,60 @@
     overflow: hidden;
   }
   
-  .stadium-images {
-    padding: 20px;
+  /* Header with title and rating */
+  .stadium-header {
+    padding: 25px 30px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .stadium-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1a4297;
+    margin-bottom: 15px;
+  }
+  
+  .stadium-rating {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  
+  .stadium-location-header {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 8px;
+    color: #666;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  
+  .location-icon {
+    color: #1a4297;
+    margin-right: 8px;
+    width: 16px;
+    margin-top: 3px;
+  }
+  
+  .stadium-type-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    color: #666;
+    font-size: 14px;
+  }
+  
+  .type-icon {
+    color: #1a4297;
+    margin-right: 8px;
+    width: 16px;
+  }
+  
+  .full-address {
+    word-break: break-word;
+    max-width: 100%;
+    line-height: 1.6;
+    display: inline-block;
   }
   
   .main-image {
@@ -50,12 +108,17 @@
     overflow: hidden;
     border-radius: 8px;
     margin-bottom: 15px;
+    background-color: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   
   .main-image img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    max-height: 400px;
   }
   
   .stadium-type {
@@ -108,24 +171,32 @@
   }
   
   .stadium-meta {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     gap: 15px;
     margin-bottom: 30px;
   }
   
   .meta-item {
     display: flex;
-    align-items: center;
-    font-size: 14px;
-    color: #666;
+    align-items: flex-start;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-radius: 6px;
+    border-left: 3px solid #1a4297;
+    word-break: break-word;
+    min-height: 60px;
   }
   
-  .meta-item i {
-    margin-right: 8px;
+  .meta-item .meta-icon {
+    margin-right: 10px;
     color: #1a4297;
-    width: 20px;
-    text-align: center;
+    margin-top: 3px;
+  }
+  
+  .meta-item span {
+    word-break: break-word;
+    max-width: 100%;
   }
   
   .status {
@@ -165,18 +236,7 @@
   }
   
   .map-placeholder {
-    width: 100%;
-    height: 200px;
-    background-color: #f0f0f0;
-    border-radius: 8px;
-    overflow: hidden;
-    margin-top: 15px;
-  }
-  
-  .map-placeholder img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    display: none;
   }
   
   .booking-section {
@@ -349,8 +409,8 @@
   
   .login-prompt a {
     color: #1a4297;
+    font-weight: bold;
     text-decoration: none;
-    font-weight: 600;
   }
   
   .login-prompt a:hover {
@@ -405,5 +465,186 @@
     
     .time-slots {
       grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+  }
+  
+  /* Cải thiện đánh giá người dùng */
+  .evaluation-item {
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-left: 4px solid #1a4297;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  }
+  
+  .evaluation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+  }
+  
+  .user-name-field {
+    display: flex;
+    align-items: center;
+    padding: 5px 10px;
+    background-color: rgba(26, 66, 151, 0.05);
+    border-radius: 20px;
+  }
+  
+  .user-icon {
+    color: #1a4297;
+    margin-right: 8px;
+  }
+  
+  .user-name {
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .stadium-name {
+    color: #666;
+    font-size: 14px;
+  }
+  
+  .evaluation-date {
+    font-size: 12px;
+    color: #888;
+    display: flex;
+    align-items: center;
+  }
+  
+  .evaluation-date svg {
+    margin-right: 5px;
+    opacity: 0.7;
+  }
+  
+  .evaluation-content {
+    background-color: #fff;
+    border-radius: 6px;
+    padding: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    margin: 15px 0;
+  }
+  
+  .evaluation-content p {
+    margin: 0;
+    line-height: 1.6;
+    font-size: 15px;
+  }
+  
+  .evaluation-rating {
+    display: flex;
+    align-items: center;
+    background-color: rgba(255, 193, 7, 0.1);
+    padding: 5px 10px;
+    border-radius: 20px;
+  }
+  
+  .star {
+    color: #ddd;
+    margin-right: 2px;
+    font-size: 16px;
+  }
+  
+  .star.filled {
+    color: #ffc107;
+  }
+  
+  .star.clickable {
+    cursor: pointer;
+  }
+  
+  .rating-selector {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+  }
+  
+  .rating-stars {
+    display: flex;
+    margin-left: 10px;
+  }
+  
+  /* Cải thiện form đánh giá */
+  .evaluation-form-container {
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+    border: 1px solid #eee;
+  }
+  
+  .evaluation-form {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  }
+  
+  .evaluation-success {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+  }
+  
+  .evaluation-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+  }
+  
+  .evaluation-success svg,
+  .evaluation-error svg {
+    margin-right: 10px;
+  }
+  
+  .submit-evaluation {
+    background-color: #1a4297;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-top: 15px;
+  }
+  
+  .submit-evaluation:hover {
+    background-color: #0e2b6f;
+  }
+  
+  /* Đảm bảo không bỏ qua các đánh giá ban đầu */
+  .no-evaluations {
+    text-align: center;
+    color: #888;
+    padding: 20px;
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    margin-top: 15px;
+  }
+  
+  @media (max-width: 768px) {
+    .stadium-meta {
+      grid-template-columns: 1fr;
+    }
+    
+    .evaluation-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .evaluation-rating {
+      margin-top: 10px;
     }
   }
