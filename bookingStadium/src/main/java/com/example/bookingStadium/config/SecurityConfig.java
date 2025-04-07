@@ -46,7 +46,9 @@ public class SecurityConfig {
                         // PUBLIC API (ai cũng truy cập được)
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST, PUBLIC_ENDPOINTS).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/type", "/PaymentMethod", "/location", "/stadium", "/image", "/WorkSchedule", "/evaluation", "/evaluation/{evaluationId}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/type", "/PaymentMethod", "/location", "/stadium", "/images", "/WorkSchedule", "/evaluation", "/evaluation/{evaluationId}").permitAll()
+                        // Cho phép truy cập thư mục uploads không cần xác thực
+                        .requestMatchers("/uploads/**").permitAll()
 
                         // API USER
                         .requestMatchers(HttpMethod.GET, "/users/{userId}").authenticated()
@@ -60,7 +62,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/type", "/PaymentMethod").hasAuthority("SCOPE_ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/type/{typeId}", "/PaymentMethod/{PaymentMethodId}").hasAuthority("SCOPE_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/type/{typeId}", "/PaymentMethod/{PaymentMethodId}").hasAuthority("SCOPE_ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "users/role/{userId}").hasAnyAuthority("SCOPE_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/users/role/{userId}").hasAnyAuthority("SCOPE_ADMIN")
 
                         // API OWNER
                         .requestMatchers(HttpMethod.POST, "/location", "/stadium", "/images/upload"
@@ -81,7 +83,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/booking/{bookingId}"
                                 , "/details/{stadiumBookingDetailId}").authenticated() // Chỉnh sửa service
 
-                        .requestMatchers(HttpMethod.GET, "/booking}", "/details").hasAnyAuthority("SCOPE_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/booking", "/details").hasAnyAuthority("SCOPE_ADMIN")
 
                         // EVALUATION
                         .requestMatchers(HttpMethod.POST, "/evaluation").hasAuthority("SCOPE_USER")

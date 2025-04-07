@@ -20,10 +20,10 @@ public class ImageController {
     private ImageService imageService;
 
     @PostMapping("/upload")
-    public ResponseEntity<String> uploadImage(@RequestParam("stadiumId") String locationId
+    public ResponseEntity<String> uploadImage(@RequestParam("stadiumId") String stadiumId
             ,@RequestParam("imageUrl") MultipartFile file){
         try {
-            String imageUrl = imageService.uploadImage(file, locationId);
+            String imageUrl = imageService.uploadImage(file, stadiumId);
             return ResponseEntity.ok(imageUrl);
         } catch (IOException e) {
             return ResponseEntity.internalServerError().body("Upload failed: " + e.getMessage());
@@ -55,6 +55,13 @@ public class ImageController {
                                            @RequestParam("file") MultipartFile newFile) throws IOException {
         ApiResponse<String> apiResponse = new ApiResponse<>();
         apiResponse.setResult(imageService.updateImage(imageId, newFile));
+        return apiResponse;
+    }
+
+    @GetMapping("/stadium/{stadiumId}")
+    ApiResponse<List<Image>> getImagesByStadiumId(@PathVariable("stadiumId") String stadiumId){
+        ApiResponse<List<Image>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(imageService.getImagesByStadiumId(stadiumId));
         return apiResponse;
     }
 }

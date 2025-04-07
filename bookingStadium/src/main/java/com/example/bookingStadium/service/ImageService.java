@@ -1,7 +1,5 @@
 package com.example.bookingStadium.service;
 
-
-
 import com.example.bookingStadium.entity.Image;
 import com.example.bookingStadium.exception.AppException;
 import com.example.bookingStadium.exception.ErrorCode;
@@ -12,13 +10,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.UUID;
+
 
 @Service
 public class ImageService {
@@ -34,12 +31,39 @@ public class ImageService {
     @Value("${upload.path}")
     private String uploadDir;
 
-    public String uploadImage(MultipartFile file, String locationId) throws IOException {
+    private String generateUniqueFileName(String originalFilename, String uploadDir) {
+        Path filePath = Paths.get(uploadDir, originalFilename);
+        
+        if (!Files.exists(filePath)) {
+            return originalFilename;
+        }
+        
+        int lastDotIndex = originalFilename.lastIndexOf(".");
+        String baseName = lastDotIndex > 0 ? originalFilename.substring(0, lastDotIndex) : originalFilename;
+        String extension = lastDotIndex > 0 ? originalFilename.substring(lastDotIndex) : "";
+        
+        int counter = 1;
+        String newFileName;
+        
+        do {
+            newFileName = baseName + "_" + counter + extension;
+            filePath = Paths.get(uploadDir, newFileName);
+            counter++;
+        } while (Files.exists(filePath));
+        
+        return newFileName;
+    }
+
+    public String uploadImage(MultipartFile file, String stadiumId) throws IOException {
         // Kiểm tra nếu file rỗng
         if (file.isEmpty()) {
-            throw new IllegalArgumentException("File is empty!");
+            throw new IllegalArgumentException("File trống!");
         }
 
+        // Kiểm tra stadiumId có hợp lệ không
+        if (stadiumId != null && !stadiumId.isEmpty() && !stadiumRepository.existsById(stadiumId)) {
+            throw new AppException(ErrorCode.STADIUM_NOT_EXISTED);
+        }
 
         // Tạo folder lưu trữ nếu chưa có
         Path uploadPath = Paths.get(uploadDir);
@@ -47,17 +71,18 @@ public class ImageService {
             Files.createDirectories(uploadPath);
         }
 
-        // Định danh file bằng UUID để tránh trùng lặp
-        String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-        Path filePath = uploadPath.resolve(fileName);
+        // Tạo tên file không trùng lặp, giữ nguyên tên gốc
+        String originalFilename = file.getOriginalFilename();
+        String uniqueFileName = generateUniqueFileName(originalFilename, uploadDir);
+        Path filePath = uploadPath.resolve(uniqueFileName);
 
         // Lưu file vào thư mục trên server
         Files.copy(file.getInputStream(), filePath);
 
         // Lưu đường dẫn vào DB
-        String fileUrl = "/uploads/" + fileName;
+        String fileUrl = "/uploads/" + uniqueFileName;
         Image image = new Image();
-        image.setLocationId(locationId);
+        image.setStadiumId(stadiumId);
         image.setImageUrl(fileUrl);
         imageRepository.save(image);
 
@@ -108,20 +133,31 @@ public class ImageService {
             throw new RuntimeException("Lỗi khi xóa file ảnh cũ: " + oldImagePath, e);
         }
 
-        // Lưu ảnh mới vào server
-        String newFileName = UUID.randomUUID() + "_" + newFile.getOriginalFilename();
-        Path newFilePath = Paths.get(uploadDir).resolve(newFileName);
+        // Lưu ảnh mới vào server với tên file gốc
+        String originalFilename = newFile.getOriginalFilename();
+        String uniqueFileName = generateUniqueFileName(originalFilename, uploadDir);
+        Path newFilePath = Paths.get(uploadDir).resolve(uniqueFileName);
         Files.copy(newFile.getInputStream(), newFilePath);
 
         // Cập nhật đường dẫn mới vào DB
-        String newFileUrl = "/uploads/" + newFileName;
+        String newFileUrl = "/uploads/" + uniqueFileName;
         image.setImageUrl(newFileUrl);
         imageRepository.save(image);
 
         return newFileUrl;
     }
 
-
+    public List<Image> getImagesByStadiumId(String stadiumId) {
+        if (stadiumId == null || stadiumId.isEmpty()) {
+            throw new IllegalArgumentException("StadiumId không được để trống");
+        }
+        
+        if (!stadiumRepository.existsById(stadiumId)) {
+            throw new AppException(ErrorCode.STADIUM_NOT_EXISTED);
+        }
+        
+        return imageRepository.findByStadiumId(stadiumId);
+    }
 }
 
 

@@ -650,3 +650,21 @@
       grid-template-columns: 1fr;
     }
   }
+  
+  /* CSS cho trường hợp không có ảnh */
+  .stadium-image.no-image {
+    background-color: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+  }
+  
+  .stadium-image .no-image-placeholder {
+    width: 100%;
+    height: 100%;
+    background-color: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }

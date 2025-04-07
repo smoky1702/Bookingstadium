@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Để trống API_URL vì đã có proxy cấu hình trong package.json
-const API_URL = ''; // Khi dùng proxy trong package.json, API_URL nên để trống
+// Sửa để trỏ trực tiếp đến backend không có context path
+const API_URL = 'http://localhost:8080';
 
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -446,10 +446,10 @@ const workScheduleAPI = {
 // API cho hình ảnh
 const imageAPI = {
   // Upload hình ảnh
-  uploadImage: (locationId, file) => {
+  uploadImage: (stadiumId, file) => {
     const formData = new FormData();
     formData.append('imageUrl', file);
-    formData.append('locationId', locationId);
+    formData.append('stadiumId', stadiumId);
     return apiClient.post('/images/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -458,10 +458,45 @@ const imageAPI = {
   },
   
   // Lấy danh sách hình ảnh
-  getImages: () => apiClient.get('/images'),
+  getImages: () => {
+    console.log('[imageAPI] Gọi API lấy tất cả hình ảnh');
+    return apiClient.get('/images').then(
+      (response) => {
+        console.log('[imageAPI] Thành công - Lấy tất cả hình ảnh:', response.data);
+        return response;
+      },
+      (error) => {
+        console.error('[imageAPI] Lỗi - Lấy tất cả hình ảnh:', error.message);
+        return Promise.reject(error);
+      }
+    );
+  },
   
   // Lấy tt hình ảnh theo ID
   getImageById: (imageId) => apiClient.get(`/images/${imageId}`),
+  
+  // Lấy hình ảnh theo stadiumId
+  getImagesByStadiumId: (stadiumId) => {
+    console.log(`[imageAPI] Gọi API lấy ảnh cho sân có ID: ${stadiumId}`);
+    
+    // Lấy tất cả ảnh và sau đó lọc theo stadiumId ở phía client
+    return apiClient.get('/images').then(response => {
+      console.log('[imageAPI] Đã nhận response từ /images');
+      
+      // Kiểm tra cấu trúc dữ liệu
+      if (response.data && response.data.result && Array.isArray(response.data.result)) {
+        // Lọc các ảnh có stadiumId trùng khớp
+        const filteredImages = response.data.result.filter(img => img.stadiumId === stadiumId);
+        console.log(`[imageAPI] Đã lọc được ${filteredImages.length} ảnh cho sân ID ${stadiumId}`);
+        
+        // Thay thế response.data.result bằng dữ liệu đã lọc
+        const newResponse = { ...response, data: { ...response.data, result: filteredImages } };
+        return newResponse;
+      }
+      
+      return response;
+    });
+  },
   
   // Xóa hình ảnh
   deleteImage: (imageId) => apiClient.delete(`/images/${imageId}`),
