@@ -1,650 +1,1020 @@
 .stadium-detail-page {
-    background-color: #f8f9fa;
-    min-height: 100vh;
-  }
-  
-  .stadium-detail-container {
-    padding: 40px 0 60px;
-  }
-  
-  .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 15px;
-  }
-  
-  .breadcrumbs {
-    display: flex;
-    align-items: center;
-    margin-bottom: 30px;
-    font-size: 14px;
-  }
-  
-  .breadcrumbs a {
-    color: #1a4297;
-    text-decoration: none;
-  }
-  
-  .breadcrumbs a:hover {
-    text-decoration: underline;
-  }
-  
-  .separator {
-    margin: 0 10px;
-    color: #999;
-  }
-  
-  .breadcrumbs .current {
-    color: #666;
-    font-weight: 500;
-  }
-  
-  .stadium-detail-content {
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    overflow: hidden;
-  }
-  
-  /* Header with title and rating */
-  .stadium-header {
-    padding: 25px 30px;
-    border-bottom: 1px solid #f0f0f0;
-  }
-  
-  .stadium-title {
-    font-size: 28px;
-    font-weight: 700;
-    color: #1a4297;
-    margin-bottom: 15px;
-  }
-  
-  .stadium-rating {
-    display: flex;
-    align-items: center;
-    margin-bottom: 12px;
-  }
-  
-  .stadium-location-header {
-    display: flex;
-    align-items: flex-start;
-    margin-bottom: 8px;
-    color: #666;
-    font-size: 14px;
-    line-height: 1.6;
-  }
-  
-  .location-icon {
-    color: #1a4297;
-    margin-right: 8px;
-    width: 16px;
-    margin-top: 3px;
-  }
-  
-  .stadium-type-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 8px;
-    color: #666;
-    font-size: 14px;
-  }
-  
-  .type-icon {
-    color: #1a4297;
-    margin-right: 8px;
-    width: 16px;
-  }
-  
-  .full-address {
-    word-break: break-word;
-    max-width: 100%;
-    line-height: 1.6;
-    display: inline-block;
-  }
-  
-  .main-image {
-    position: relative;
-    height: 400px;
-    overflow: hidden;
-    border-radius: 8px;
-    margin-bottom: 15px;
-    background-color: #f0f0f0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .main-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    max-height: 400px;
-  }
-  
-  .stadium-type {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    background-color: rgba(0, 0, 0, 0.7);
-    color: white;
-    padding: 5px 15px;
-    border-radius: 4px;
-    font-size: 14px;
-  }
-  
-  .thumbnail-images {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-  }
-  
-  .thumbnail {
-    width: 100px;
-    height: 80px;
-    object-fit: cover;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: opacity 0.3s;
-  }
-  
-  .thumbnail:hover {
-    opacity: 0.8;
-  }
-  
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+.stadium-detail-container {
+  padding: 40px 0 60px;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 15px;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  margin-bottom: 30px;
+  font-size: 14px;
+}
+
+.breadcrumbs a {
+  color: #1a4297;
+  text-decoration: none;
+}
+
+.breadcrumbs a:hover {
+  text-decoration: underline;
+}
+
+.separator {
+  margin: 0 10px;
+  color: #999;
+}
+
+.breadcrumbs .current {
+  color: #666;
+  font-weight: 500;
+}
+
+.stadium-detail-content {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+/* Header with title and rating */
+.stadium-header {
+  padding: 25px 30px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.stadium-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a4297;
+  margin-bottom: 15px;
+}
+
+.stadium-rating {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.stadium-location-header {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.location-icon {
+  color: #1a4297;
+  margin-right: 8px;
+  width: 16px;
+  margin-top: 3px;
+}
+
+.stadium-type-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  color: #666;
+  font-size: 14px;
+}
+
+.type-icon {
+  color: #1a4297;
+  margin-right: 8px;
+  width: 16px;
+}
+
+.full-address {
+  word-break: break-word;
+  max-width: 100%;
+  line-height: 1.6;
+  display: inline-block;
+}
+
+.main-image {
+  position: relative;
+  height: 400px;
+  overflow: hidden;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  background-color: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.main-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  max-height: 400px;
+}
+
+.stadium-type {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 5px 15px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.thumbnail-images {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+}
+
+.thumbnail {
+  width: 100px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+
+.thumbnail:hover {
+  opacity: 0.8;
+}
+
+.stadium-info-booking {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.stadium-info {
+  flex: 2;
+  min-width: 300px;
+  padding: 20px;
+  border-right: 1px solid #eee;
+}
+
+.stadium-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.stadium-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 15px;
+  background-color: #f9f9f9;
+  border-radius: 6px;
+  border-left: 3px solid #1a4297;
+  word-break: break-word;
+  min-height: 60px;
+}
+
+.meta-item .meta-icon {
+  margin-right: 10px;
+  color: #1a4297;
+  margin-top: 3px;
+}
+
+.meta-item span {
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.status {
+  font-weight: 500;
+}
+
+.status.available {
+  color: #28a745;
+}
+
+.status.booked {
+  color: #fd7e14;
+}
+
+.status.maintenance {
+  color: #e74c3c;
+}
+
+.status-pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-confirmed {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-cancelled {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.status-completed {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+.stadium-description,
+.stadium-location {
+  margin-bottom: 30px;
+}
+
+.stadium-description h3,
+.stadium-location h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 15px;
+}
+
+.stadium-description p,
+.stadium-location p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #666;
+}
+
+.map-placeholder {
+  display: none;
+}
+
+.booking-section {
+  flex: 1;
+  min-width: 300px;
+  padding: 20px;
+  background-color: #f9f9f9;
+}
+
+.booking-section h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.booking-success,
+.booking-error {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.booking-success {
+  background-color: #e6f7ee;
+  color: #28a745;
+}
+
+.booking-error {
+  background-color: #fee;
+  color: #e74c3c;
+}
+
+.booking-success i,
+.booking-error i {
+  font-size: 20px;
+  margin-right: 10px;
+}
+
+.booking-form {
+  margin-top: 20px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.form-group label::after {
+  content: "";
+  font-size: 0.8rem;
+  color: #6c757d;
+  font-weight: normal;
+}
+
+.working-hours-hint {
+  display: inline-block;
+  font-size: 0.8rem;
+  color: #6c757d;
+  font-weight: normal;
+  margin-left: 5px;
+}
+
+.form-control {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.booking-summary {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.booking-summary h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.summary-item.total {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.booking-button {
+  width: 100%;
+  padding: 12px;
+  background-color: #1a4297;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.booking-button:hover:not(:disabled) {
+  background-color: #0e2b6f;
+}
+
+.booking-button:disabled {
+  background-color: #b3c2e6;
+  cursor: not-allowed;
+}
+
+.login-prompt {
+  text-align: center;
+  margin-top: 15px;
+  font-size: 14px;
+  color: #666;
+}
+
+.login-prompt a {
+  color: #1a4297;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.login-prompt a:hover {
+  text-decoration: underline;
+}
+
+.loading,
+.error-message {
+  text-align: center;
+  padding: 40px;
+  font-size: 16px;
+}
+
+.loading {
+  color: #666;
+}
+
+.error-message {
+  color: #e74c3c;
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  color: #1a4297;
+  text-decoration: none;
+  margin-top: 20px;
+  font-size: 14px;
+}
+
+.back-button i {
+  margin-right: 8px;
+}
+
+.back-button:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
   .stadium-info-booking {
-    display: flex;
-    flex-wrap: wrap;
+      flex-direction: column;
   }
   
   .stadium-info {
-    flex: 2;
-    min-width: 300px;
-    padding: 20px;
-    border-right: 1px solid #eee;
-  }
-  
-  .stadium-name {
-    font-size: 24px;
-    font-weight: 700;
-    color: #333;
-    margin-bottom: 20px;
-  }
-  
-  .stadium-meta {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 15px;
-    margin-bottom: 30px;
-  }
-  
-  .meta-item {
-    display: flex;
-    align-items: flex-start;
-    padding: 15px;
-    background-color: #f9f9f9;
-    border-radius: 6px;
-    border-left: 3px solid #1a4297;
-    word-break: break-word;
-    min-height: 60px;
-  }
-  
-  .meta-item .meta-icon {
-    margin-right: 10px;
-    color: #1a4297;
-    margin-top: 3px;
-  }
-  
-  .meta-item span {
-    word-break: break-word;
-    max-width: 100%;
-  }
-  
-  .status {
-    font-weight: 500;
-  }
-  
-  .status.available {
-    color: #28a745;
-  }
-  
-  .status.booked {
-    color: #fd7e14;
-  }
-  
-  .status.maintenance {
-    color: #e74c3c;
-  }
-  
-  .stadium-description,
-  .stadium-location {
-    margin-bottom: 30px;
-  }
-  
-  .stadium-description h3,
-  .stadium-location h3 {
-    font-size: 18px;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 15px;
-  }
-  
-  .stadium-description p,
-  .stadium-location p {
-    font-size: 14px;
-    line-height: 1.6;
-    color: #666;
-  }
-  
-  .map-placeholder {
-    display: none;
-  }
-  
-  .booking-section {
-    flex: 1;
-    min-width: 300px;
-    padding: 20px;
-    background-color: #f9f9f9;
-  }
-  
-  .booking-section h3 {
-    font-size: 18px;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 20px;
-  }
-  
-  .booking-success,
-  .booking-error {
-    display: flex;
-    align-items: center;
-    padding: 15px;
-    border-radius: 4px;
-    margin-bottom: 20px;
-  }
-  
-  .booking-success {
-    background-color: #e6f7ee;
-    color: #28a745;
-  }
-  
-  .booking-error {
-    background-color: #fee;
-    color: #e74c3c;
-  }
-  
-  .booking-success i,
-  .booking-error i {
-    font-size: 20px;
-    margin-right: 10px;
-  }
-  
-  .booking-form {
-    margin-top: 20px;
-  }
-  
-  .form-group {
-    margin-bottom: 20px;
-  }
-  
-  .form-group label {
-    display: block;
-    font-size: 14px;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 8px;
-  }
-  
-  .form-control {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-  }
-  
-  .time-slots {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 10px;
-  }
-  
-  .time-slot {
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    text-align: center;
-    font-size: 14px;
-    cursor: pointer;
-    position: relative;
-    transition: all 0.3s;
-  }
-  
-  .time-slot:hover:not(.unavailable) {
-    border-color: #1a4297;
-    background-color: #f0f4ff;
-  }
-  
-  .time-slot.selected {
-    border-color: #1a4297;
-    background-color: #1a4297;
-    color: white;
-  }
-  
-  .time-slot.unavailable {
-    background-color: #f9f9f9;
-    color: #999;
-    cursor: not-allowed;
-  }
-  
-  .unavailable-label {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    background-color: #e74c3c;
-    color: white;
-    font-size: 10px;
-    padding: 3px 6px;
-    border-radius: 10px;
-    font-weight: 600;
-  }
-  
-  .booking-summary {
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 15px;
-    margin-bottom: 20px;
-  }
-  
-  .booking-summary h4 {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 15px;
-    color: #333;
-  }
-  
-  .summary-item {
-    display: flex;
-    justify-content: space-between;
-    font-size: 14px;
-    margin-bottom: 10px;
-  }
-  
-  .summary-item.total {
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: 1px solid #eee;
-    font-weight: 600;
-    font-size: 16px;
-  }
-  
-  .booking-button {
-    width: 100%;
-    padding: 12px;
-    background-color: #1a4297;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.3s;
-  }
-  
-  .booking-button:hover:not(:disabled) {
-    background-color: #0e2b6f;
-  }
-  
-  .booking-button:disabled {
-    background-color: #b3c2e6;
-    cursor: not-allowed;
-  }
-  
-  .login-prompt {
-    text-align: center;
-    margin-top: 15px;
-    font-size: 14px;
-    color: #666;
-  }
-  
-  .login-prompt a {
-    color: #1a4297;
-    font-weight: bold;
-    text-decoration: none;
-  }
-  
-  .login-prompt a:hover {
-    text-decoration: underline;
-  }
-  
-  .loading,
-  .error-message {
-    text-align: center;
-    padding: 40px;
-    font-size: 16px;
-  }
-  
-  .loading {
-    color: #666;
-  }
-  
-  .error-message {
-    color: #e74c3c;
-  }
-  
-  .back-button {
-    display: inline-flex;
-    align-items: center;
-    color: #1a4297;
-    text-decoration: none;
-    margin-top: 20px;
-    font-size: 14px;
-  }
-  
-  .back-button i {
-    margin-right: 8px;
-  }
-  
-  .back-button:hover {
-    text-decoration: underline;
-  }
-  
-  @media (max-width: 768px) {
-    .stadium-info-booking {
-      flex-direction: column;
-    }
-    
-    .stadium-info {
       border-right: none;
       border-bottom: 1px solid #eee;
-    }
-    
-    .main-image {
-      height: 250px;
-    }
-    
-    .time-slots {
-      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    }
   }
   
-  /* Cải thiện đánh giá người dùng */
-  .evaluation-item {
-    background-color: #f9f9f9;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-    border-left: 4px solid #1a4297;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  .main-image {
+      height: 250px;
+  }
+}
+
+/* Cải thiện đánh giá người dùng */
+.evaluation-item {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+  border-left: 3px solid #1a4297;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.evaluation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.user-name-field {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  background-color: rgba(26, 66, 151, 0.05);
+  border-radius: 20px;
+}
+
+.user-icon {
+  color: #1a4297;
+  margin-right: 8px;
+}
+
+.user-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.stadium-name {
+  color: #666;
+  font-size: 14px;
+}
+
+.evaluation-date {
+  font-size: 12px;
+  color: #888;
+  display: flex;
+  align-items: center;
+}
+
+.evaluation-date svg {
+  margin-right: 5px;
+  opacity: 0.7;
+}
+
+.evaluation-content {
+  background-color: #fff;
+  border-radius: 6px;
+  padding: 15px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  margin: 15px 0;
+}
+
+.evaluation-content p {
+  margin: 0;
+  line-height: 1.6;
+  font-size: 15px;
+}
+
+.evaluation-rating {
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 193, 7, 0.1);
+  padding: 5px 10px;
+  border-radius: 20px;
+}
+
+.star {
+  color: #ddd;
+  margin-right: 2px;
+  font-size: 16px;
+}
+
+.star.filled {
+  color: #ffc107;
+}
+
+.star.clickable {
+  cursor: pointer;
+}
+
+.rating-selector {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.rating-stars {
+  display: flex;
+  margin-left: 10px;
+}
+
+/* Cải thiện form đánh giá */
+.evaluation-form-container {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+  border: 1px solid #eee;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.evaluation-form {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.evaluation-success {
+  background-color: #d4edda;
+  color: #155724;
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+}
+
+.evaluation-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+}
+
+.evaluation-success svg,
+.evaluation-error svg {
+  margin-right: 10px;
+}
+
+.submit-evaluation {
+  background-color: #1a4297;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: 15px;
+}
+
+.submit-evaluation:hover {
+  background-color: #0e2b6f;
+}
+
+/* Phân trang */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding: 15px 0;
+}
+
+.pagination button {
+  padding: 8px 16px;
+  border: 1px solid #1a4297;
+  background-color: white;
+  color: #1a4297;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pagination button:hover {
+  background-color: #1a4297;
+  color: white;
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #f5f5f5;
+  border-color: #ddd;
+  color: #999;
+}
+
+.pagination span {
+  color: #666;
+  font-size: 14px;
+}
+
+/* Đảm bảo không bỏ qua các đánh giá ban đầu */
+.no-evaluations {
+  text-align: center;
+  color: #888;
+  padding: 20px;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+  margin-top: 15px;
+}
+
+@media (max-width: 768px) {
+  .stadium-meta {
+      grid-template-columns: 1fr;
   }
   
   .evaluation-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-  }
-  
-  .user-name-field {
-    display: flex;
-    align-items: center;
-    padding: 5px 10px;
-    background-color: rgba(26, 66, 151, 0.05);
-    border-radius: 20px;
-  }
-  
-  .user-icon {
-    color: #1a4297;
-    margin-right: 8px;
-  }
-  
-  .user-name {
-    font-weight: 600;
-    color: #333;
-  }
-  
-  .stadium-name {
-    color: #666;
-    font-size: 14px;
-  }
-  
-  .evaluation-date {
-    font-size: 12px;
-    color: #888;
-    display: flex;
-    align-items: center;
-  }
-  
-  .evaluation-date svg {
-    margin-right: 5px;
-    opacity: 0.7;
-  }
-  
-  .evaluation-content {
-    background-color: #fff;
-    border-radius: 6px;
-    padding: 15px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    margin: 15px 0;
-  }
-  
-  .evaluation-content p {
-    margin: 0;
-    line-height: 1.6;
-    font-size: 15px;
+      flex-direction: column;
+      align-items: flex-start;
   }
   
   .evaluation-rating {
-    display: flex;
-    align-items: center;
-    background-color: rgba(255, 193, 7, 0.1);
-    padding: 5px 10px;
-    border-radius: 20px;
-  }
-  
-  .star {
-    color: #ddd;
-    margin-right: 2px;
-    font-size: 16px;
-  }
-  
-  .star.filled {
-    color: #ffc107;
-  }
-  
-  .star.clickable {
-    cursor: pointer;
-  }
-  
-  .rating-selector {
-    display: flex;
-    align-items: center;
-    margin-bottom: 15px;
-  }
-  
-  .rating-stars {
-    display: flex;
-    margin-left: 10px;
-  }
-  
-  /* Cải thiện form đánh giá */
-  .evaluation-form-container {
-    background-color: #f9f9f9;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 30px;
-    border: 1px solid #eee;
-  }
-  
-  .evaluation-form {
-    background-color: #fff;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-  }
-  
-  .evaluation-success {
-    background-color: #d4edda;
-    color: #155724;
-    padding: 10px 15px;
-    border-radius: 4px;
-    margin-bottom: 15px;
-    display: flex;
-    align-items: center;
-  }
-  
-  .evaluation-error {
-    background-color: #f8d7da;
-    color: #721c24;
-    padding: 10px 15px;
-    border-radius: 4px;
-    margin-bottom: 15px;
-    display: flex;
-    align-items: center;
-  }
-  
-  .evaluation-success svg,
-  .evaluation-error svg {
-    margin-right: 10px;
-  }
-  
-  .submit-evaluation {
-    background-color: #1a4297;
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 4px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    margin-top: 15px;
-  }
-  
-  .submit-evaluation:hover {
-    background-color: #0e2b6f;
-  }
-  
-  /* Đảm bảo không bỏ qua các đánh giá ban đầu */
-  .no-evaluations {
-    text-align: center;
-    color: #888;
-    padding: 20px;
-    background-color: #f0f0f0;
-    border-radius: 8px;
-    margin-top: 15px;
-  }
-  
-  @media (max-width: 768px) {
-    .stadium-meta {
-      grid-template-columns: 1fr;
-    }
-    
-    .evaluation-header {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-    
-    .evaluation-rating {
       margin-top: 10px;
-    }
   }
+}
+
+/* Cải thiện hiển thị khung giờ đã đặt */
+.booked-time-slots {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+  border: 1px solid #e9ecef;
+}
+
+.booked-time-slots h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-weight: 600;
+  color: #343a40;
+  font-size: 1rem;
+}
+
+.no-booked-slots {
+  color: #6c757d;
+  font-style: italic;
+  text-align: center;
+  padding: 15px;
+  background-color: #fff;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.booked-slots-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.booked-slot-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #fff;
+  border-radius: 6px;
+  padding: 12px 15px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+}
+
+.booked-slot-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 5px rgba(0,0,0,0.1);
+}
+
+.slot-time {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  color: #343a40;
+}
+
+.time-icon {
+  color: #1a4297;
+  margin-right: 10px;
+}
+
+.time-value {
+  font-size: 0.95rem;
+}
+
+.slot-status {
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Cải thiện giao diện chọn thời gian */
+.time-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.time-input-wrapper input[type="time"] {
+  position: relative;
+}
+
+/* Ẩn phần AM/PM từ bộ chọn thời gian trên Chrome/Edge */
+.time-input-wrapper input[type="time"]::-webkit-datetime-edit-ampm-field {
+  display: none;
+}
+
+/* Bật tất cả các trường khác để chỉ hiển thị giờ:phút */
+.time-input-wrapper input[type="time"]::-webkit-datetime-edit-fields-wrapper,
+.time-input-wrapper input[type="time"]::-webkit-datetime-edit-hour-field,
+.time-input-wrapper input[type="time"]::-webkit-datetime-edit-minute-field,
+.time-input-wrapper input[type="time"]::-webkit-datetime-edit-text {
+  display: inline;
+}
+
+/* Firefox và các trình duyệt khác */
+.time-input-wrapper input[type="time"] {
+  -moz-appearance: textfield;
+  -webkit-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Tăng kích thước input thời gian và đổi màu bộ chọn cho dễ nhìn */
+.time-input-wrapper input[type="time"] {
+  flex: 1;
+  min-width: 120px;
+  height: 38px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  padding: 0 10px;
+  font-size: 1rem;
+  color: #212529;
+  background-color: #fff;
+}
+
+.time-input-wrapper input[type="time"]::-webkit-calendar-picker-indicator {
+  background-color: transparent;
+  padding: 6px;
+  cursor: pointer;
+  position: absolute;
+  right: 0;
+  opacity: 0.7;
+}
+
+.quick-time-select {
+  flex: 1;
+  min-width: 120px;
+  height: 38px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  padding: 0 10px;
+  font-size: 0.9rem;
+  background-color: #f8f9fa;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23495057' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
+}
+
+.quick-time-select:hover {
+  background-color: #e9ecef;
+}
+
+.quick-time-select option {
+  padding: 8px;
+}
+
+@media (max-width: 576px) {
+  .time-input-wrapper {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .time-input-wrapper input[type="time"],
+  .quick-time-select {
+    width: 100%;
+  }
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+/* Style cho input time 24h */
+.time-input-24h {
+  font-size: 1rem !important;
+  text-align: center;
+}
+
+/* Ẩn hoàn toàn lựa chọn AM/PM trong time picker */
+.time-input-24h::-webkit-datetime-edit-ampm-field {
+  display: none !important;
+  visibility: hidden !important;
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Ẩn nội dung SA/CH trên các trình duyệt không phải Webkit */
+@supports not (-webkit-appearance: none) {
+  .time-input-24h::after {
+    content: none !important;
+  }
+  
+  .time-input-24h::-ms-value {
+    text-align: left;
+    padding-right: 30px;
+  }
+}
+
+/* Tùy chỉnh kích thước và chiều rộng */
+.time-input-wrapper input.time-input-24h[type="time"] {
+  max-width: 100%;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Tùy chỉnh vùng chọn thời gian */
+.time-input-24h::-webkit-datetime-edit {
+  padding: 0 5px;
+  text-align: center;
+}
+
+.time-input-24h::-webkit-clear-button {
+  display: none;
+}
+
+/* Cải thiện mạnh hiển thị 24h */
+input[type="time"] {
+  color-scheme: light;
+}
+
+.time-input-24h {
+  font-family: Consolas, monospace !important;
+  color: #212529 !important;
+  text-align: center !important;
+}
+
+/* Vô hiệu hóa hoàn toàn phần chọn AM/PM (SA/CH) */
+.time-input-24h::-webkit-datetime-edit-ampm-field {
+  display: none !important;
+  width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  opacity: 0 !important;
+}
+
+/* Hack cho Firefox và các trình duyệt khác */
+@-moz-document url-prefix() {
+  .time-input-24h {
+    -moz-appearance: textfield !important;
+    width: 5.5em !important;
+  }
+  
+  .time-input-24h::-moz-clear-button {
+    -moz-appearance: none !important;
+    display: none !important;
+  }
+}
+
+/* Thử áp dụng một biện pháp mạnh hơn cho tất cả các trình duyệt */
+.time-input-24h::before {
+  content: none !important;
+}
+
+.time-input-24h::after {
+  content: none !important;
+}
+
+/* Thiết kế input thời gian dạng văn bản */
+.custom-time-input {
+  font-family: 'Roboto Mono', monospace;
+  text-align: center;
+  letter-spacing: 1px;
+  font-size: 1rem;
+  padding-left: 15px;
+  padding-right: 15px;
+  color: #333;
+  height: 42px;
+  transition: all 0.2s;
+}
+
+.custom-time-input::placeholder {
+  color: #aaa;
+  opacity: 0.7;
+}
+
+.custom-time-input:focus {
+  border-color: #1a4297;
+  box-shadow: 0 0 0 0.2rem rgba(26, 66, 151, 0.2);
+  outline: none;
+}
+
+/* Kiểu dáng khi giá trị hợp lệ/không hợp lệ */
+.custom-time-input:valid {
+  border-color: #28a745;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2328a745' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
+  padding-right: 35px;
+}
+
+.custom-time-input:invalid:not(:placeholder-shown) {
+  border-color: #dc3545;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23dc3545' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'%3E%3C/line%3E%3Cline x1='6' y1='6' x2='18' y2='18'%3E%3C/line%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
+  padding-right: 35px;
+}
+
+/* Cải thiện dropdown chọn thời gian */
+.quick-time-select option {
+  padding: 8px;
+  font-size: 0.9rem;
+}
+
+.quick-time-select option:first-child {
+  font-weight: bold;
+  color: #666;
+}
+
+/* Cải thiện bố cục trên mobile */
+@media (max-width: 576px) {
+  .time-input-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+.default-schedule-notice {
+  padding: 5px 10px;
+  margin-bottom: 10px;
+  background-color: #f8f9fa;
+  border-left: 3px solid #ffc107;
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
+.default-schedule-notice p {
+  margin: 0;
+  padding: 5px 0;
+}
+
+.stadium-operating-hours .schedule-table {
+  background-color: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}

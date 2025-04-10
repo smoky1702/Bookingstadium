@@ -13,11 +13,11 @@ const apiClient = axios.create({
 
 // Danh sách các endpoint công khai không cần xác thực
 const publicEndpoints = [
-  '/stadium',
-  '/type', 
-  '/location',
-  '/images',
-  '/evaluation'
+  { path: '/stadium', allowId: true },
+  { path: '/type', allowId: true }, 
+  { path: '/location', allowId: true },
+  { path: '/images', allowId: true },
+  { path: '/evaluation', allowId: true },
 ];
 
 // Interceptor thêm token và log request
@@ -27,13 +27,33 @@ apiClient.interceptors.request.use(
     
     // Kiểm tra xem URL hiện tại có phải là endpoint công khai không
     const isPublicEndpoint = publicEndpoints.some(endpoint => {
-      // Kiểm tra cả endpoint gốc và endpoint có ID
-      const isBaseEndpoint = config.url.startsWith(endpoint);
-      const isDetailEndpoint = new RegExp(`^${endpoint}/\\d+$`).test(config.url);
-      return (isBaseEndpoint || isDetailEndpoint) && config.method?.toLowerCase() === 'get';
+      const isGetRequest = config.method?.toLowerCase() === 'get';
+      
+      // Nếu không phải GET request, không phải public endpoint
+      if (!isGetRequest) return false;
+      
+      // Kiểm tra endpoint path có khớp với URL hiện tại không
+      // Sử dụng regex để khớp chính xác với đường dẫn gốc hoặc đường dẫn có ID
+      const regex = new RegExp(`^${endpoint.path}(/[\\w-]+)?$`);
+      const matches = regex.test(config.url);
+      
+      if (matches) {
+        console.log(`URL ${config.url} khớp với endpoint pattern ${endpoint.path}`);
+        
+        // Kiểm tra xem URL có ID không
+        const hasId = config.url.split('/').length > 2;
+        
+        // Endpoint cho phép ID hoặc không có ID
+        const isPublic = !hasId || endpoint.allowId;
+        console.log(`URL có ID: ${hasId}, Endpoint cho phép ID: ${endpoint.allowId}, Là public: ${isPublic}`);
+        
+        return isPublic;
+      }
+      
+      return false;
     });
 
-    console.log(`[API Request] URL: ${config.url}`);
+    console.log(`[API Request] URL: ${config.url}, Method: ${config.method}`);
     console.log(`[API Request] Is public endpoint: ${isPublicEndpoint}`);
     
     // Chỉ đính kèm token nếu không phải là endpoint công khai GET
@@ -119,6 +139,18 @@ const userAPI = {
   getUserById: (id) => {
     console.log(`[userAPI] Gọi API lấy thông tin user với ID: ${id}`);
     return apiClient.get(`/users/${id}`);
+  },
+  
+  // Lấy người dùng theo firstname (endpoint mới)
+  getUserByFirstname: (firstname) => {
+    console.log(`[userAPI] Gọi API lấy thông tin user với firstname: ${firstname}`);
+    return apiClient.get(`/users/${firstname}`);
+  },
+  
+  // Lấy người dùng theo lastname (endpoint mới)
+  getUserByLastname: (lastname) => {
+    console.log(`[userAPI] Gọi API lấy thông tin user với lastname: ${lastname}`);
+    return apiClient.get(`/users/${lastname}`);
   },
   
   // Cập nhật tt
@@ -242,7 +274,10 @@ const stadiumAPI = {
         return Promise.reject(error);
       }
     );
-  }
+  },
+
+  // Lấy các booking của một sân trong một ngày
+  getStadiumBooking: (stadiumId, date) => apiClient.get(`/stadium/${stadiumId}/booking?date=${date}`),
 };
 
 // API cho loại sân
@@ -350,64 +385,33 @@ const locationAPI = {
   deleteLocation: (locationId) => apiClient.delete(`/location/${locationId}`),
 };
 
-// API cho đặt sân
+// API cho booking
 const bookingAPI = {
-  // Tạo đặt sân 
   createBooking: (bookingData) => apiClient.post('/booking', bookingData),
-  
-  // Lấy danh sách đặt sân
-  getBookings: () => apiClient.get('/booking'),
-  
-  // Lấy tt đặt sân theo ID
+  getBooking: () => apiClient.get("/booking"),
   getBookingById: (bookingId) => apiClient.get(`/booking/${bookingId}`),
-  
-  // Cập nhật đặt sân
   updateBooking: (bookingId, bookingData) => apiClient.put(`/booking/${bookingId}`, bookingData),
-  
-  // Xóa đặt sân
   deleteBooking: (bookingId) => apiClient.delete(`/booking/${bookingId}`),
-  
-  // Lấy danh sách đặt sân của người dùng
-  getUserBookings: (userId) => apiClient.get(`/booking/user/${userId}`),
+  getUserBookings: (userId) => apiClient.get(`/booking/user/${userId}`)
 };
 
-// API cho chi tiết đặt sân
+// API cho booking detail
 const stadiumBookingDetailAPI = {
-  // Tạo chi tiết đặt sân
   createStadiumBookingDetail: (detailData) => apiClient.post('/details', detailData),
-  
-  // Lấy danh sách chi tiết đặt sân
-  getStadiumBookingDetails: () => apiClient.get('/details'),
-  
-  // Lấy tt chi tiết đặt sân theo ID
-  getStadiumBookingDetailById: (detailId) => apiClient.get(`/details/${detailId}`),
-  
-  // Cập nhật chi tiết đặt sân
-  updateStadiumBookingDetail: (detailId, detailData) => apiClient.put(`/details/${detailId}`, detailData),
-  
-  // Xóa chi tiết đặt sân
-  deleteStadiumBookingDetail: (detailId) => apiClient.delete(`/details/${detailId}`),
+  getStadiumBookingDetail: () => apiClient.get("/details"),
+  getStadiumBookingDetailById: (stadiumBookingDetailId) => apiClient.get(`/details/${stadiumBookingDetailId}`),
+  updateStadiumBookingDetail: (stadiumBookingDetailId, detailData) => apiClient.put(`/details/${stadiumBookingDetailId}`, detailData),
+  deleteStadiumBookingDetail: (stadiumBookingDetailId) => apiClient.delete(`/details/${stadiumBookingDetailId}`)
 };
 
-// API cho hóa đơn
+// API cho bill
 const billAPI = {
-  // Tạo hóa đơn
   createBill: (billData) => apiClient.post('/bill', billData),
-  
-  // Lấy danh sách hóa đơn
-  getBills: () => apiClient.get('/bill'),
-  
-  // Lấy tt hóa đơn theo ID
+  getBill: () => apiClient.get("/bill"),
   getBillById: (billId) => apiClient.get(`/bill/${billId}`),
-  
-  // Cập nhật hóa đơn
   updateBill: (billId, billData) => apiClient.put(`/bill/update/${billId}`, billData),
-  
-  // Thanh toán hóa đơn
-  payBill: (billId, paymentData) => apiClient.put(`/bill/paid/${billId}`, paymentData),
-  
-  // Xóa hóa đơn
-  deleteBill: (billId) => apiClient.delete(`/bill/${billId}`),
+  paidBill: (billId, billData) => apiClient.put(`/bill/paid/${billId}`, billData),
+  deleteBill: (billId) => apiClient.delete(`/bill/${billId}`)
 };
 
 // API cho đánh giá
@@ -486,22 +490,13 @@ const evaluationAPI = {
   deleteEvaluation: (evaluationId) => apiClient.delete(`/evaluation/${evaluationId}`),
 };
 
-// API cho phương thức thanh toán
+// API cho payment method
 const paymentMethodAPI = {
-  // Tạo phương thức thanh toán
   createPaymentMethod: (paymentMethodData) => apiClient.post('/PaymentMethod', paymentMethodData),
-  
-  // Lấy danh sách phương thức thanh toán
-  getPaymentMethods: () => apiClient.get('/PaymentMethod'),
-  
-  // Lấy tt phương thức thanh toán theo ID
+  getPaymentMethod: () => apiClient.get("/PaymentMethod"),
   getPaymentMethodById: (paymentMethodId) => apiClient.get(`/PaymentMethod/${paymentMethodId}`),
-  
-  // Cập nhật phương thức thanh toán
   updatePaymentMethod: (paymentMethodId, paymentMethodData) => apiClient.put(`/PaymentMethod/${paymentMethodId}`, paymentMethodData),
-  
-  // Xóa phương thức thanh toán
-  deletePaymentMethod: (paymentMethodId) => apiClient.delete(`/PaymentMethod/${paymentMethodId}`),
+  deletePaymentMethod: (paymentMethodId) => apiClient.delete(`/PaymentMethod/${paymentMethodId}`)
 };
 
 // API cho lịch làm việc
@@ -510,7 +505,42 @@ const workScheduleAPI = {
   createWorkSchedule: (workScheduleData) => apiClient.post('/WorkSchedule', workScheduleData),
   
   // Lấy danh sách lịch làm việc
-  getWorkSchedules: () => apiClient.get('/WorkSchedule'),
+  getWorkSchedule: () => {
+    console.log("[workScheduleAPI] Đang gọi API lấy lịch làm việc");
+    return apiClient.get('/WorkSchedule')
+      .then(response => {
+        console.log("[workScheduleAPI] Thành công:", response.data);
+        return response;
+      })
+      .catch(error => {
+        console.error("[workScheduleAPI] Lỗi khi gọi /WorkSchedule:", error.message);
+        
+        // Thử endpoint thứ hai: /workSchedule (chữ w viết thường)
+        console.log("[workScheduleAPI] Thử lại với endpoint /workSchedule");
+        return apiClient.get('/workSchedule')
+          .then(response => {
+            console.log("[workScheduleAPI] Thành công với /workSchedule:", response.data);
+            return response;
+          })
+          .catch(error2 => {
+            console.error("[workScheduleAPI] Lỗi khi gọi /workSchedule:", error2.message);
+            
+            // Thử endpoint thứ ba: /work-schedule (kebab-case)
+            console.log("[workScheduleAPI] Thử lại với endpoint /work-schedule");
+            return apiClient.get('/work-schedule')
+              .then(response => {
+                console.log("[workScheduleAPI] Thành công với /work-schedule:", response.data);
+                return response;
+              })
+              .catch(error3 => {
+                console.error("[workScheduleAPI] Lỗi khi gọi /work-schedule:", error3.message);
+                
+                // Trả về lỗi ban đầu nếu tất cả endpoint đều thất bại
+                return Promise.reject(error);
+              });
+          });
+      });
+  },
   
   // Lấy tt lịch làm việc theo ID
   getWorkScheduleById: (workScheduleId) => apiClient.get(`/WorkSchedule/${workScheduleId}`),

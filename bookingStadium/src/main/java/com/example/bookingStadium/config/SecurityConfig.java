@@ -82,7 +82,7 @@ public class SecurityConfig {
                                 , "/details/{stadiumBookingDetailId}").authenticated() // Chỉnh sửa service
                         .requestMatchers(HttpMethod.DELETE, "/booking/{bookingId}"
                                 , "/details/{stadiumBookingDetailId}").authenticated() // Chỉnh sửa service
-
+                        .requestMatchers(HttpMethod.GET, "/stadium/{stadiumId}/booking?date={date}").authenticated() // Chỉnh sửa service
                         .requestMatchers(HttpMethod.GET, "/booking", "/details").hasAnyAuthority("SCOPE_ADMIN")
 
                         // EVALUATION

@@ -16,6 +16,8 @@ const RegisterModal = ({ isOpen, onClose, openLoginModal }) => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -79,6 +81,24 @@ const RegisterModal = ({ isOpen, onClose, openLoginModal }) => {
     openLoginModal();
   };
 
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+    if (!showPassword) {
+      setTimeout(() => {
+        setShowPassword(false);
+      }, 5000);
+    }
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+    if (!showConfirmPassword) {
+      setTimeout(() => {
+        setShowConfirmPassword(false);
+      }, 5000);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -132,7 +152,7 @@ const RegisterModal = ({ isOpen, onClose, openLoginModal }) => {
             
             <div className="form-group">
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 name="password"
                 placeholder="Mật khẩu * (ít nhất 6 ký tự)"
                 value={formData.password}
@@ -140,11 +160,16 @@ const RegisterModal = ({ isOpen, onClose, openLoginModal }) => {
                 className="form-control"
                 required
               />
+              <i
+                className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}
+                onClick={togglePasswordVisibility}
+                style={{ cursor: 'pointer', marginLeft: '10px' }}
+              ></i>
             </div>
             
             <div className="form-group">
               <input
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 name="confirmPassword"
                 placeholder="Nhập lại mật khẩu *"
                 value={formData.confirmPassword}
@@ -152,6 +177,11 @@ const RegisterModal = ({ isOpen, onClose, openLoginModal }) => {
                 className="form-control"
                 required
               />
+              <i
+                className={`fas ${showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'}`}
+                onClick={toggleConfirmPasswordVisibility}
+                style={{ cursor: 'pointer', marginLeft: '10px' }}
+              ></i>
             </div>
             
             <div className="form-group">

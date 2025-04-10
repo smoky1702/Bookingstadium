@@ -10,6 +10,7 @@ const LoginModal = ({ isOpen, onClose, openRegisterModal }) => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -48,6 +49,15 @@ const LoginModal = ({ isOpen, onClose, openRegisterModal }) => {
     openRegisterModal();
   };
 
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+    if (!showPassword) {
+      setTimeout(() => {
+        setShowPassword(false);
+      }, 5000);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -77,7 +87,7 @@ const LoginModal = ({ isOpen, onClose, openRegisterModal }) => {
             
             <div className="form-group">
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 name="password"
                 placeholder="Mật khẩu *"
                 value={formData.password}
@@ -85,6 +95,11 @@ const LoginModal = ({ isOpen, onClose, openRegisterModal }) => {
                 className="form-control"
                 required
               />
+              <i
+                className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}
+                onClick={togglePasswordVisibility}
+                style={{ cursor: 'pointer', marginLeft: '10px' }}
+              ></i>
             </div>
             
             <div className="forgot-password">

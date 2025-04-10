@@ -1,20 +1,24 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useContext, useMemo, useRef } from 'react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faStar, faMapMarkerAlt, faTag, faMoneyBillWave, faCheckCircle, 
-         faTimesCircle, faFutbol, faCalendarAlt, faUser, faCommentAlt,
-         faArrowLeft, faLocationArrow, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
+import {
+  faStar, faMapMarkerAlt, faTag, faMoneyBillWave, faCheckCircle,
+  faTimesCircle, faFutbol, faCalendarAlt, faUser, faCommentAlt,
+  faArrowLeft, faLocationArrow, faInfoCircle, faClock
+} from '@fortawesome/free-solid-svg-icons';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import AuthContext from '../../context/AuthContext';
-import { stadiumAPI, locationAPI, typeAPI, imageAPI, bookingAPI, stadiumBookingDetailAPI, evaluationAPI, userAPI } from '../../services/apiService';
+import { stadiumAPI, locationAPI, typeAPI, imageAPI, bookingAPI, stadiumBookingDetailAPI, billAPI, evaluationAPI, userAPI, workScheduleAPI } from '../../services/apiService';
+import BookingConfirmModal from '../BookingConfirmModal/BookingConfirmModal';
 import '../StadiumDetailPage/StadiumDetailPage.css';
 
-const StadiumDetailPage = () => {
+// Cung cấp giá trị mặc định cho openLoginModal để tránh lỗi nếu không được truyền
+const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal not provided') }) => {
   const { stadiumId } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated, currentUser } = useContext(AuthContext);
-  
+  const { isAuthenticated, currentUser, logout } = useContext(AuthContext);
+
   const [stadium, setStadium] = useState(null);
   const [location, setLocation] = useState(null);
   const [type, setType] = useState(null);
@@ -22,8 +26,12 @@ const StadiumDetailPage = () => {
   const [error, setError] = useState(null);
   const [stadiumImage, setStadiumImage] = useState(null);
   const [evaluations, setEvaluations] = useState([]);
-  const [evaluationUsers, setEvaluationUsers] = useState({});
-  
+  const [allBookings, setAllBookings] = useState([]); // Lưu trữ toàn bộ booking
+  const [bookedTimeSlots, setBookedTimeSlots] = useState([]); // Lưu trữ khung giờ đã đặt trong ngày được chọn
+  const [workSchedule, setWorkSchedule] = useState([]); // Lưu trữ lịch làm việc
+  const [currentPage, setCurrentPage] = useState(1); // Thêm state cho trang hiện tại
+  const evaluationsPerPage = 4; // Số đánh giá mỗi trang
+
   // Booking form data
   const [bookingData, setBookingData] = useState({
     userId: currentUser?.user_id || '',
@@ -32,22 +40,11 @@ const StadiumDetailPage = () => {
     startTime: '',
     endTime: '',
   });
-  
-  // Thời gian có sẵn
-  const [availableTimeSlots, setAvailableTimeSlots] = useState([
-    { id: '1', time: '08:00 - 10:00', available: true, start: '08:00:00', end: '10:00:00' },
-    { id: '2', time: '10:00 - 12:00', available: true, start: '10:00:00', end: '12:00:00' },
-    { id: '3', time: '12:00 - 14:00', available: true, start: '12:00:00', end: '14:00:00' },
-    { id: '4', time: '14:00 - 16:00', available: true, start: '14:00:00', end: '16:00:00' },
-    { id: '5', time: '16:00 - 18:00', available: true, start: '16:00:00', end: '18:00:00' },
-    { id: '6', time: '18:00 - 20:00', available: true, start: '18:00:00', end: '20:00:00' },
-    { id: '7', time: '20:00 - 22:00', available: true, start: '20:00:00', end: '22:00:00' }
-  ]);
-  
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
+
   const [bookingError, setBookingError] = useState(null);
   const [bookingSuccess, setBookingSuccess] = useState(false);
-  
+  const [timeError, setTimeError] = useState(null);
+
   // Form đánh giá
   const [evaluationForm, setEvaluationForm] = useState({
     content: '',
@@ -56,65 +53,355 @@ const StadiumDetailPage = () => {
   const [evaluationError, setEvaluationError] = useState(null);
   const [evaluationSuccess, setEvaluationSuccess] = useState(false);
   
+  // Lưu giờ làm việc cho ngày đã chọn
+  const [workingHours, setWorkingHours] = useState({ 
+    openingHours: "08:00", 
+    closingHours: "22:00" 
+  });
+  
+  // Lấy giờ làm việc cho ngày đã chọn
+  const getWorkingHoursForSelectedDate = (dateString) => {
+    if (!workSchedule || !workSchedule.length || !dateString) {
+      return { openingHours: "08:00", closingHours: "22:00" }; // Giá trị mặc định nếu không có dữ liệu
+    }
+    
+    const selectedDate = new Date(dateString);
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayOfWeek = dayNames[selectedDate.getDay()];
+    
+    // Tìm lịch làm việc cho ngày trong tuần đã chọn
+    const scheduleForDay = workSchedule.find(schedule => schedule.dayOfTheWeek === dayOfWeek);
+    
+    if (scheduleForDay) {
+      return {
+        openingHours: scheduleForDay.openingHours,
+        closingHours: scheduleForDay.closingHours
+      };
+    }
+    
+    // Nếu không tìm thấy, trả về giờ mặc định
+    return { openingHours: "08:00", closingHours: "22:00" };
+  };
+  
+  // Cập nhật giờ làm việc khi chọn ngày
+  useEffect(() => {
+    if (bookingData.dateOfBooking) {
+      const hours = getWorkingHoursForSelectedDate(bookingData.dateOfBooking);
+      setWorkingHours(hours);
+    }
+  }, [bookingData.dateOfBooking, workSchedule]);
+
+  // Lấy user_id ngay khi trang tải
+  useEffect(() => {
+    const fetchUserDetails = async () => {
+      if (!currentUser?.user_id) {
+        try {
+          const userResponse = await userAPI.getCurrentUser();
+          const userId = userResponse.data?.user_id || userResponse.data?.id;
+          if (userId) {
+            console.log('Lấy được user_id:', userId);
+          } else {
+            console.warn('API getCurrentUser không trả về user_id:', userResponse.data);
+          }
+        } catch (error) {
+          console.error('Error fetching user info:', error);
+          if (error.response?.status === 401 || error.response?.status === 403) {
+            logout();
+            if (typeof openLoginModal === 'function') {
+              openLoginModal();
+            } else {
+              console.error('openLoginModal is not a function');
+            }
+          }
+        }
+      }
+    };
+
+    if (isAuthenticated) {
+      fetchUserDetails();
+    }
+  }, [isAuthenticated, currentUser, logout, openLoginModal]);
+
+  // Lấy toàn bộ booking một lần duy nhất khi component mount, nhưng chỉ nếu người dùng đã đăng nhập
+  const [bookingCache, setBookingCache] = useState({});
+  const isLoadingRef = useRef(false);
+  const lastDateRef = useRef(null);
+
+  useEffect(() => {
+    const fetchBookingsByDate = async () => {
+      // Điều kiện để tránh gọi API không cần thiết
+      if (!stadiumId || !bookingData.dateOfBooking || !isAuthenticated) return;
+      
+      // Nếu đang loading hoặc ngày giống hệt lần cuối, bỏ qua
+      if (isLoadingRef.current || bookingData.dateOfBooking === lastDateRef.current) return;
+      
+      // Nếu dữ liệu đã có trong cache, dùng lại luôn
+      if (bookingCache[bookingData.dateOfBooking]) {
+        console.log(`Lấy dữ liệu từ cache cho ngày ${bookingData.dateOfBooking}`);
+        const validBookings = bookingCache[bookingData.dateOfBooking].filter(
+          booking => booking.status === 'CONFIRMED' || booking.status === 'PENDING'
+        );
+        setBookedTimeSlots(validBookings);
+        return;
+      }
+      
+      try {
+        // Đánh dấu đang loading và lưu ngày hiện tại
+        isLoadingRef.current = true;
+        lastDateRef.current = bookingData.dateOfBooking;
+        
+        console.log(`Đang gọi API cho ngày ${bookingData.dateOfBooking}`);
+        const response = await stadiumAPI.getStadiumBooking(stadiumId, bookingData.dateOfBooking);
+        
+        const bookings = response.data?.result || response.data || [];
+        console.log('Received bookings:', bookings);
+        
+        // Lọc các booking có trạng thái CONFIRMED hoặc PENDING
+        const validBookings = bookings.filter(
+          booking => booking.status === 'CONFIRMED' || booking.status === 'PENDING'
+        );
+        console.log('Valid bookings:', validBookings);
+        
+        // Lưu vào cache và cập nhật state
+        setBookingCache(prev => ({...prev, [bookingData.dateOfBooking]: bookings}));
+        setBookedTimeSlots(validBookings);
+      } catch (error) {
+        console.error('Error fetching bookings:', error);
+        
+        // Xử lý lỗi 404 - khung giờ trống
+        if (error.response?.status === 404) {
+          console.log('Không có booking nào cho ngày này, hiển thị trống');
+          setBookedTimeSlots([]);
+          return;
+        }
+        
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          setBookingError('Vui lòng đăng nhập để xem danh sách đặt sân.');
+          logout();
+          if (typeof openLoginModal === 'function') {
+            openLoginModal();
+          } else {
+            console.error('openLoginModal is not a function');
+          }
+        } else {
+          setBookingError('Không thể tải danh sách đặt sân. Sân có thể còn trống hoặc hệ thống đang gặp sự cố.');
+          setBookedTimeSlots([]);
+        }
+      } finally {
+        setTimeout(() => {
+          isLoadingRef.current = false;
+        }, 300);
+      }
+    };
+
+    fetchBookingsByDate();
+    
+    return () => {
+      isLoadingRef.current = false;
+    };
+  }, [stadiumId, bookingData.dateOfBooking, isAuthenticated]);
+
+  // Lấy lịch làm việc
+  useEffect(() => {
+    const fetchWorkSchedule = async () => {
+      if (!stadium || !location) return;
+      
+      try {
+        console.log("Đang gọi API workSchedule...");
+        const response = await workScheduleAPI.getWorkSchedule();
+        console.log("Nhận được response từ API workSchedule:", response);
+        
+        if (response && response.data) {
+          console.log("Data từ API workSchedule:", response.data);
+          
+          let scheduleData = [];
+          
+          // Kiểm tra các cấu trúc phản hồi có thể có
+          if (response.data.result && Array.isArray(response.data.result)) {
+            console.log("Sử dụng cấu trúc response.data.result");
+            scheduleData = response.data.result;
+          } else if (response.data.data && Array.isArray(response.data.data)) {
+            console.log("Sử dụng cấu trúc response.data.data");
+            scheduleData = response.data.data;
+          } else if (Array.isArray(response.data)) {
+            console.log("Sử dụng cấu trúc response.data array");
+            scheduleData = response.data;
+          }
+          
+          console.log("Dữ liệu lịch làm việc trước khi lọc:", scheduleData);
+          
+          // Lọc lịch làm việc theo locationId
+          const locationIdToMatch = location.locationId || location.id;
+          console.log("Đang lọc theo locationId:", locationIdToMatch);
+          
+          const stadiumSchedule = scheduleData.filter(schedule => {
+            const scheduleLocationId = schedule.locationId || schedule.location_id;
+            const isMatched = scheduleLocationId == locationIdToMatch;
+            console.log(`Schedule item locationId: ${scheduleLocationId}, match: ${isMatched}`);
+            return isMatched;
+          });
+          
+          console.log("Lịch làm việc sau khi lọc:", stadiumSchedule);
+          
+          // Chỉ cần thiết lập trạng thái khi có dữ liệu lịch làm việc từ API
+          setWorkSchedule(stadiumSchedule);
+        }
+      } catch (error) {
+        console.error('Lỗi khi lấy lịch làm việc:', error);
+        console.log('Chi tiết lỗi:', error.response || error.message);
+      }
+    };
+    
+    fetchWorkSchedule();
+  }, [stadium, location]);
+
+  // Hàm lấy tên loại sân
+  const getTypeName = (typeObj) => {
+    if (!typeObj) return "Không xác định";
+    return typeObj.typeName || typeObj.type_name || typeObj.name || "Không xác định";
+  };
+
+  // Hàm lấy địa chỉ đầy đủ
+  const getFullAddress = () => {
+    if (!location) return "Đang cập nhật địa chỉ...";
+    const parts = [];
+    if (location.address) parts.push(location.address);
+    if (location.ward) parts.push(location.ward);
+    if (location.district) parts.push(location.district);
+    if (location.city) parts.push(location.city);
+    if (location.province) parts.push(location.province);
+    return parts.join(", ") || "Chưa có thông tin địa chỉ";
+  };
+
+  // Lấy giá trị đánh giá (rating)
+  const getEvaluationRating = (evaluation) => {
+    if (!evaluation) return 0;
+    return Number(evaluation.rating || evaluation.ratingScore || evaluation.ratingValue || evaluation.score || evaluation.value || 0) || 0;
+  };
+
+  // Lấy nội dung đánh giá
+  const getEvaluationContent = (evaluation) => {
+    const content = evaluation.content || evaluation.evaluationContent || evaluation.comment || evaluation.text || evaluation.description || evaluation.message;
+    if (evaluation.data && typeof evaluation.data === 'object') {
+      const dataContent = evaluation.data.content || evaluation.data.evaluationContent || evaluation.data.comment || evaluation.data.text;
+      if (dataContent) return dataContent;
+    }
+    return content || '';
+  };
+
+  // Tạo các tùy chọn nhảy 30 phút
+  const generateTimeOptions = (startHour, endHour) => {
+    const options = [];
+    for (let hour = startHour; hour <= endHour; hour++) {
+      options.push(`${hour.toString().padStart(2, '0')}:00`);
+      if (hour < endHour) {
+        options.push(`${hour.toString().padStart(2, '0')}:30`);
+      }
+    }
+    return options;
+  };
+
+  // Hàm hiển thị tên người dùng
+  const handleUserDisplay = (evaluation) => {
+    const userId = evaluation.userId;
+    if (userId) {
+      const userIdSuffix = userId.slice(-4);
+      return `Người dùng ẩn danh ${userIdSuffix}`;
+    }
+    return "Người dùng";
+  };
+
   useEffect(() => {
     const fetchStadiumDetails = async () => {
       try {
         setLoading(true);
         setError(null);
-        
-        // 1. Lấy thông tin sân
-        const stadiumResponse = await stadiumAPI.getStadiumById(stadiumId);
-        const stadiumData = stadiumResponse.data?.result || stadiumResponse.data;
+
+        // 1. Lấy thông tin sân bóng
+        let stadiumData = null;
+        try {
+          const stadiumResponse = await stadiumAPI.getStadiumById(stadiumId);
+          stadiumData = stadiumResponse.data?.result || stadiumResponse.data;
+        } catch (stadiumError) {
+          try {
+            const altStadiumResponse = await stadiumAPI.getStadiumByIdAlternative(stadiumId);
+            stadiumData = altStadiumResponse.data?.result || altStadiumResponse.data;
+          } catch (altError) {
+            throw new Error("Không thể lấy thông tin sân");
+          }
+        }
+
         if (!stadiumData) {
           throw new Error("Không thể lấy thông tin sân");
         }
+
+        console.log('>> Dữ liệu sân từ API:', stadiumData);
+        console.log('>> Trạng thái (status) sân:', stadiumData.status);
+
         setStadium(stadiumData);
-        
-        // 2. Lấy thông tin địa điểm
-        if (stadiumData.locationId) {
+
+        // 2. Lấy toàn bộ địa điểm
+        let locationList = [];
+        try {
+          const locationsResponse = await locationAPI.getLocations();
+          locationList = locationsResponse.data?.result || locationsResponse.data || [];
+        } catch (locationsError) {
           try {
-            const locationResponse = await locationAPI.getLocationById(stadiumData.locationId);
-            const locationData = locationResponse.data?.result || locationResponse.data;
-            if (locationData) {
-              setLocation(locationData);
-            }
-          } catch (locationError) {
-            console.error("Lỗi khi lấy thông tin địa điểm:", locationError);
-            // Thử API thay thế
+            const altLocationsResponse = await locationAPI.getLocationsAlternative();
+            locationList = altLocationsResponse.data?.result || altLocationsResponse.data || [];
+          } catch (altError) {
+            console.error("Lỗi khi lấy danh sách địa điểm:", altError);
+          }
+        }
+
+        if (locationList.length > 0 && stadiumData.locationId) {
+          const matchedLocation = locationList.find(loc =>
+            loc.locationId === stadiumData.locationId || loc.id === stadiumData.locationId
+          );
+          if (matchedLocation) {
+            setLocation(matchedLocation);
+          } else {
             try {
-              const altLocationResponse = await locationAPI.getLocationByIdAlternative(stadiumData.locationId);
-              const locationData = altLocationResponse.data?.result || altLocationResponse.data;
+              const locationResponse = await locationAPI.getLocationById(stadiumData.locationId);
+              const locationData = locationResponse.data?.result || locationResponse.data;
               if (locationData) {
                 setLocation(locationData);
               }
-            } catch (altLocationError) {
-              console.error("Lỗi khi lấy thông tin địa điểm từ API thay thế:", altLocationError);
+            } catch (locationError) {
+              console.error("Lỗi khi lấy thông tin địa điểm trực tiếp:", locationError);
             }
           }
         }
 
-        // 3. Lấy thông tin loại sân
-        if (stadiumData.typeId) {
+        // 3. Lấy toàn bộ loại sân
+        let typeList = [];
+        try {
+          const typesResponse = await typeAPI.getTypes();
+          typeList = typesResponse.data?.result || typesResponse.data || [];
+        } catch (typesError) {
           try {
-            const typeResponse = await typeAPI.getTypeById(stadiumData.typeId);
-            const typeData = typeResponse.data?.result || typeResponse.data;
-            if (typeData) {
-              setType(typeData);
-            }
-          } catch (typeError) {
-            console.error("Lỗi khi lấy thông tin loại sân:", typeError);
-            // Thử API thay thế
+            const altTypesResponse = await typeAPI.getTypesAlternative();
+            typeList = altTypesResponse.data?.result || altTypesResponse.data || [];
+          } catch (altError) {
+            console.error("Lỗi khi lấy danh sách loại sân:", altError);
+          }
+        }
+
+        if (typeList.length > 0 && stadiumData.typeId) {
+          const matchedType = typeList.find(t =>
+            t.typeId == stadiumData.typeId || t.id == stadiumData.typeId
+          );
+          if (matchedType) {
+            setType(matchedType);
+          } else {
             try {
-              const altTypeResponse = await typeAPI.getTypesAlternative();
-              const types = altTypeResponse.data?.result || altTypeResponse.data;
-              if (Array.isArray(types)) {
-                const matchedType = types.find(t => t.id === stadiumData.typeId);
-                if (matchedType) {
-                  setType(matchedType);
-                }
+              const typeResponse = await typeAPI.getTypeById(stadiumData.typeId);
+              const typeData = typeResponse.data?.result || typeResponse.data;
+              if (typeData) {
+                setType(typeData);
               }
-            } catch (altTypeError) {
-              console.error("Lỗi khi lấy thông tin loại sân từ API thay thế:", altTypeError);
+            } catch (typeError) {
+              console.error("Lỗi khi lấy thông tin loại sân trực tiếp:", typeError);
             }
           }
         }
@@ -133,28 +420,8 @@ const StadiumDetailPage = () => {
         // 5. Lấy đánh giá
         try {
           const evaluationsResponse = await evaluationAPI.getEvaluationsByStadiumId(stadiumId);
-          const evaluations = evaluationsResponse.data?.result || evaluationsResponse.data;
-          if (Array.isArray(evaluations)) {
-            setEvaluations(evaluations);
-            
-            // Lấy thông tin người dùng cho mỗi đánh giá
-            const userIds = [...new Set(evaluations.map(e => e.userId))];
-            const userDataMap = {};
-            
-            for (const userId of userIds) {
-              try {
-                const userResponse = await userAPI.getUserById(userId);
-                const userData = userResponse.data?.result || userResponse.data;
-                if (userData) {
-                  userDataMap[userId] = userData;
-                }
-              } catch (userError) {
-                console.error(`Lỗi khi lấy thông tin người dùng ${userId}:`, userError);
-              }
-            }
-            
-            setEvaluationUsers(userDataMap);
-          }
+          let evaluationsList = evaluationsResponse.data?.result || evaluationsResponse.data || [];
+          setEvaluations(evaluationsList);
         } catch (evaluationError) {
           console.error("Lỗi khi lấy đánh giá:", evaluationError);
         }
@@ -171,9 +438,8 @@ const StadiumDetailPage = () => {
       fetchStadiumDetails();
     }
   }, [stadiumId]);
-  
+
   useEffect(() => {
-    // Cập nhật userId trong bookingData khi currentUser thay đổi
     if (currentUser) {
       setBookingData(prev => ({
         ...prev,
@@ -181,84 +447,280 @@ const StadiumDetailPage = () => {
       }));
     }
   }, [currentUser]);
-  
+
   const handleDateChange = (e) => {
     const selectedDate = e.target.value;
     setBookingData(prev => ({
       ...prev,
-      dateOfBooking: selectedDate
+      dateOfBooking: selectedDate,
+      startTime: '',
+      endTime: ''
     }));
-    
-    // Lấy time slots khả dụng cho ngày được chọn
-    // Trong dự án thực tế, sẽ gọi API để lấy các time slots chưa được đặt
-    // Ở đây sẽ mô phỏng bằng cách random
-    const newSlots = availableTimeSlots.map(slot => ({
-      ...slot,
-      available: Math.random() > 0.3
-    }));
-    setAvailableTimeSlots(newSlots);
-    
-    // Reset time slot đã chọn khi thay đổi ngày
-    setSelectedTimeSlot(null);
+    setTimeError(null);
+    setBookingError(null);
+
+    if (!isAuthenticated) {
+      setBookedTimeSlots([]);
+      return;
+    }
+
+    // Lọc các booking cho sân này (dựa trên locationId), ngày được chọn, và trạng thái CONFIRMED hoặc PENDING
+    const relevantBookings = allBookings.filter(booking =>
+      booking.locationId === stadium?.locationId &&
+      booking.dateOfBooking === selectedDate &&
+      (booking.status === 'CONFIRMED' || booking.status === 'PENDING')
+    );
+
+    // Lưu các khung giờ đã đặt
+    setBookedTimeSlots(relevantBookings.map(booking => ({
+      startTime: booking.startTime,
+      endTime: booking.endTime
+    })));
   };
-  
-  const handleTimeSlotSelect = (slot) => {
-    if (!slot.available) return;
-    
-    setSelectedTimeSlot(slot.id);
-    
+
+  const handleStartTimeChange = (e) => {
+    const startTime = e.target.value;
     setBookingData(prev => ({
       ...prev,
-      startTime: slot.start,
-      endTime: slot.end
+      startTime
     }));
+    validateTime(startTime, bookingData.endTime);
   };
+
+  const handleEndTimeChange = (e) => {
+    const endTime = e.target.value;
+    setBookingData(prev => ({
+      ...prev,
+      endTime
+    }));
+    validateTime(bookingData.startTime, endTime);
+  };
+
+  const validateTime = (startTime, endTime) => {
+    if (!startTime || !endTime) {
+      setTimeError('Vui lòng chọn cả giờ bắt đầu và giờ kết thúc.');
+      return;
+    }
+
+    // Kiểm tra định dạng HH:MM
+    const timeFormat = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timeFormat.test(startTime) || !timeFormat.test(endTime)) {
+      setTimeError('Vui lòng nhập thời gian theo định dạng HH:MM (ví dụ: 08:13).');
+      return;
+    }
+
+    const start = new Date(`1970-01-01T${startTime}`);
+    const end = new Date(`1970-01-01T${endTime}`);
+    const diffMinutes = (end - start) / (1000 * 60);
+
+    // Kiểm tra giờ có nằm trong khoảng giờ làm việc không
+    const opening = new Date(`1970-01-01T${workingHours.openingHours}`);
+    const closing = new Date(`1970-01-01T${workingHours.closingHours}`);
+    if (start < opening || start >= closing || end <= opening || end > closing) {
+      setTimeError(`Vui lòng chọn thời gian trong khoảng ${workingHours.openingHours} - ${workingHours.closingHours}.`);
+      return;
+    }
+
+    // Kiểm tra thời gian đặt tối thiểu 1 tiếng
+    if (diffMinutes < 60) {
+      setTimeError('Thời gian đặt sân tối thiểu là 1 tiếng.');
+      return;
+    }
+
+    // Kiểm tra giờ kết thúc phải sau giờ bắt đầu
+    if (start >= end) {
+      setTimeError('Giờ kết thúc phải sau giờ bắt đầu.');
+      return;
+    }
+
+    console.log('Checking time slots:', {
+      selectedStart: startTime,
+      selectedEnd: endTime,
+      bookedTimeSlots: bookedTimeSlots
+    });
+
+    // Kiểm tra trùng lặp với các khung giờ đã đặt
+    const hasConflict = bookedTimeSlots.some(slot => {
+      console.log('Checking slot:', slot);
+      
+      const bookedStart = new Date(`1970-01-01T${slot.startTime}`);
+      const bookedEnd = new Date(`1970-01-01T${slot.endTime}`);
+
+      // Kiểm tra chồng chéo thời gian
+      const isOverlap = (
+        (start >= bookedStart && start < bookedEnd) ||
+        (end > bookedStart && end <= bookedEnd) ||
+        (start <= bookedStart && end >= bookedEnd)
+      );
+
+      if (isOverlap) {
+        console.log('Found overlap with slot:', slot);
+        setTimeError(`Khung giờ từ ${slot.startTime} đến ${slot.endTime} đã được đặt. Vui lòng chọn khung giờ khác.`);
+        return true;
+      }
+
+      // Kiểm tra khoảng cách 10 phút
+      const minutesBeforeNext = (start - bookedEnd) / (1000 * 60);
+      const minutesAfterPrevious = (bookedStart - end) / (1000 * 60);
+
+      if (bookedEnd <= start && minutesBeforeNext < 10) {
+        console.log('Gap too small before booking:', slot);
+        setTimeError(`Cần ít nhất 10 phút giữa các đơn đặt sân (${slot.startTime}-${slot.endTime}).`);
+        return true;
+      }
+
+      if (bookedStart >= end && minutesAfterPrevious < 10) {
+        console.log('Gap too small after booking:', slot);
+        setTimeError(`Cần ít nhất 10 phút giữa các đơn đặt sân (${slot.startTime}-${slot.endTime}).`);
+        return true;
+      }
+
+      return false;
+    });
+
+    if (!hasConflict) {
+      console.log('No conflicts found');
+      setTimeError(null);
+    }
+  };
+
+  // Kiểm tra tính khả dụng của khung giờ
+  const checkAvailability = async () => {
+    if (!bookingData.dateOfBooking || !bookingData.startTime || !bookingData.endTime) return false;
   
+    try {
+      const currentDateTime = new Date();
+      const selectedDateTime = new Date(`${bookingData.dateOfBooking}T${bookingData.startTime}:00`);
+      const selectedEndTime = new Date(`${bookingData.dateOfBooking}T${bookingData.endTime}:00`);
+  
+      if (currentDateTime > selectedEndTime) {
+        setBookingError('Thời gian đặt sân đã trôi qua. Vui lòng chọn thời gian khác.');
+        return false;
+      }
+  
+      // Kiểm tra từ danh sách bookedTimeSlots đã được lấy từ API
+      for (const booking of bookedTimeSlots) {
+        const bookingStart = new Date(`${bookingData.dateOfBooking}T${booking.startTime}:00`);
+        const bookingEnd = new Date(`${bookingData.dateOfBooking}T${booking.endTime}:00`);
+  
+        if (currentDateTime > bookingEnd) continue;
+  
+        // Kiểm tra chồng chéo
+        if (
+          selectedDateTime.toDateString() === bookingStart.toDateString() &&
+          (
+            (selectedDateTime >= bookingStart && selectedDateTime < bookingEnd) ||
+            (selectedEndTime > bookingStart && selectedEndTime <= bookingEnd) ||
+            (selectedDateTime <= bookingStart && selectedEndTime >= bookingEnd)
+          )
+        ) {
+          setBookingError('Khung giờ này đã được đặt. Vui lòng chọn khung giờ khác.');
+          return false;
+        }
+  
+        // Kiểm tra khoảng cách 10 phút
+        const minutesBetweenEndAndStart = (selectedDateTime - bookingEnd) / (1000 * 60);
+        const minutesBetweenStartAndEnd = (bookingStart - selectedEndTime) / (1000 * 60);
+  
+        if (bookingEnd <= selectedDateTime && minutesBetweenEndAndStart < 10) {
+          setBookingError(`Khung giờ này quá gần với một đơn đặt sân khác (${booking.startTime}-${booking.endTime}). Cần ít nhất 10 phút để dọn dẹp sân.`);
+          return false;
+        }
+  
+        if (bookingStart >= selectedEndTime && minutesBetweenStartAndEnd < 10) {
+          setBookingError(`Khung giờ này quá gần với một đơn đặt sân khác (${booking.startTime}-${booking.endTime}). Cần ít nhất 10 phút để dọn dẹp sân.`);
+          return false;
+        }
+      }
+  
+      setBookingError(null);
+      return true;
+    } catch (error) {
+      console.error('Error checking availability:', error);
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        setBookingError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        logout();
+        if (typeof openLoginModal === 'function') {
+          openLoginModal();
+        } else {
+          console.error('openLoginModal is not a function');
+        }
+      } else {
+        setBookingError('Không thể kiểm tra tính khả dụng. Vui lòng thử lại sau.');
+      }
+      return false;
+    }
+  };
+
+  // Thêm các state cho modal xác nhận
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isProcessingBooking, setIsProcessingBooking] = useState(false);
+
+  // Thay đổi hàm handleBookingSubmit
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!isAuthenticated) {
       setBookingError('Vui lòng đăng nhập để đặt sân.');
       return;
     }
-    
+
     if (!bookingData.dateOfBooking) {
       setBookingError('Vui lòng chọn ngày.');
       return;
     }
-    
-    if (!selectedTimeSlot) {
-      setBookingError('Vui lòng chọn khung giờ.');
+
+    if (!bookingData.startTime || !bookingData.endTime) {
+      setBookingError('Vui lòng chọn giờ bắt đầu và giờ kết thúc.');
       return;
     }
-    
+
+    if (timeError) {
+      setBookingError(timeError);
+      return;
+    }
+
+    const isAvailable = await checkAvailability();
+    if (!isAvailable) return;
+
+    // Hiển thị modal xác nhận thay vì tạo booking ngay
+    setShowConfirmModal(true);
+  };
+
+  // Thêm hàm confirmBooking để xử lý khi người dùng xác nhận đặt sân
+  const confirmBooking = async (phoneNumber) => {
     try {
+      setIsProcessingBooking(true);
       setBookingError(null);
-      
-      // Tạo đặt sân mới
+
       const bookingResponse = await bookingAPI.createBooking({
-        userId: bookingData.userId,
-        locationId: bookingData.locationId,
+        userId: currentUser?.user_id,
+        locationId: stadium.locationId,
         dateOfBooking: bookingData.dateOfBooking,
         startTime: bookingData.startTime,
-        endTime: bookingData.endTime
+        endTime: bookingData.endTime,
+        phone: phoneNumber // Sử dụng số điện thoại từ modal
       });
-      
+
       if (bookingResponse.data && bookingResponse.data.result) {
-        // Lấy booking ID từ response
         const newBookingId = bookingResponse.data.result.bookingId || bookingResponse.data.result.stadium_booking_id;
-        
-        // Tạo chi tiết đặt sân
+
         await stadiumBookingDetailAPI.createStadiumBookingDetail({
           stadium_booking_id: newBookingId,
           type_id: stadium.typeId,
           stadium_id: stadium.stadiumId
         });
-        
+
+        await billAPI.createBill({
+          stadiumBookingId: newBookingId
+        });
+
         setBookingSuccess(true);
-        
-        // Reset form
-        setSelectedTimeSlot(null);
+        setShowConfirmModal(false);
+
+        // Cập nhật danh sách booking
+        setAllBookings(prev => [...prev, bookingResponse.data.result]);
+
         setBookingData({
           userId: currentUser?.user_id || '',
           locationId: stadium.locationId,
@@ -266,80 +728,195 @@ const StadiumDetailPage = () => {
           startTime: '',
           endTime: ''
         });
-        
-        // Chuyển hướng đến trang chi tiết đặt sân sau 2 giây
+
         setTimeout(() => {
           navigate(`/booking/${newBookingId}`);
         }, 2000);
       }
     } catch (error) {
       console.error('Error booking stadium:', error);
-      setBookingError('Đặt sân thất bại. Vui lòng thử lại sau.');
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        setBookingError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        logout();
+        if (typeof openLoginModal === 'function') {
+          openLoginModal();
+        } else {
+          console.error('openLoginModal is not a function');
+        }
+      } else {
+        setBookingError('Đặt sân thất bại. Vui lòng thử lại sau.');
+      }
+    } finally {
+      setIsProcessingBooking(false);
     }
   };
 
-  // Hàm xử lý khi thay đổi rating
   const handleRatingChange = (rating) => {
     setEvaluationForm(prev => ({
       ...prev,
       rating
     }));
   };
-  
-  // Hàm xử lý khi thay đổi nội dung đánh giá
+
   const handleEvaluationContentChange = (e) => {
     setEvaluationForm(prev => ({
       ...prev,
       content: e.target.value
     }));
   };
-  
-  // Hàm xử lý khi submit đánh giá
+
   const handleEvaluationSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!isAuthenticated) {
       setEvaluationError('Vui lòng đăng nhập để đánh giá.');
       return;
     }
-    
+
     if (!evaluationForm.content.trim()) {
       setEvaluationError('Vui lòng nhập nội dung đánh giá.');
       return;
     }
-    
+
+    if (!evaluationForm.rating || evaluationForm.rating < 1 || evaluationForm.rating > 5) {
+      setEvaluationError('Vui lòng chọn số sao từ 1 đến 5.');
+      return;
+    }
+
+    if (!stadiumId) {
+      setEvaluationError('Không tìm thấy thông tin sân. Vui lòng thử lại.');
+      return;
+    }
+
+    let userId = currentUser?.user_id;
+    if (!userId) {
+      try {
+        const userResponse = await userAPI.getCurrentUser();
+        let userData = null;
+        if (userResponse.data?.result && Array.isArray(userResponse.data.result)) {
+          userData = userResponse.data.result.find(user => user.email === currentUser?.email);
+          if (!userData) {
+            setEvaluationError('Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
+            return;
+          }
+        } else if (userResponse.data?.user_id) {
+          userData = userResponse.data;
+        } else {
+          setEvaluationError('Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
+          return;
+        }
+
+        userId = userData.user_id || userData.id;
+        if (!userId) {
+          setEvaluationError('Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
+          return;
+        }
+      } catch (error) {
+        console.error('Error fetching user info:', error);
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          setEvaluationError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+          logout();
+          if (typeof openLoginModal === 'function') {
+            openLoginModal();
+          } else {
+            console.error('openLoginModal is not a function');
+          }
+        } else {
+          setEvaluationError('Không thể lấy thông tin người dùng. Vui lòng thử lại sau.');
+        }
+        return;
+      }
+    }
+
     try {
       setEvaluationError(null);
-      
-      // Tạo đánh giá mới
-      const evaluationResponse = await evaluationAPI.createEvaluation({
-        userId: currentUser.user_id,
-        stadiumId: stadiumId,
-        content: evaluationForm.content,
-        rating: evaluationForm.rating
-      });
-      
+
+      const evaluationData = {
+        user_id: userId,
+        stadium_id: stadiumId,
+        rating_score: evaluationForm.rating.toString(),
+        comment: evaluationForm.content.trim(),
+      };
+
+      const evaluationResponse = await evaluationAPI.createEvaluation(evaluationData);
+
       if (evaluationResponse.data && evaluationResponse.data.result) {
         setEvaluationSuccess(true);
-        
-        // Thêm đánh giá mới vào danh sách
+
         const newEvaluation = evaluationResponse.data.result;
         setEvaluations(prev => [newEvaluation, ...prev]);
         
-        // Reset form đánh giá
+        // Reset về trang đầu tiên khi thêm đánh giá mới
+        setCurrentPage(1);
+
         setEvaluationForm({
           content: '',
           rating: 5
         });
-        
-        // Sau 3 giây, ẩn thông báo thành công
+
         setTimeout(() => {
           setEvaluationSuccess(false);
         }, 3000);
       }
     } catch (error) {
       console.error('Error creating evaluation:', error);
-      setEvaluationError('Đánh giá thất bại. Vui lòng thử lại sau.');
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        setEvaluationError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        logout();
+        if (typeof openLoginModal === 'function') {
+          openLoginModal();
+        } else {
+          console.error('openLoginModal is not a function');
+        }
+      } else if (error.response?.data?.message) {
+        setEvaluationError(`Lỗi: ${error.response.data.message}`);
+      } else {
+        setEvaluationError('Đánh giá thất bại. Vui lòng thử lại sau.');
+      }
+    }
+  };
+
+  // Render lịch làm việc
+  const renderWorkSchedule = () => {
+    if (!workSchedule || workSchedule.length === 0) {
+      return <p className="no-schedule">Chưa có thông tin lịch hoạt động</p>;
+    }
+    
+    const daysOfWeek = {
+      'Monday': 'Thứ Hai',
+      'Tuesday': 'Thứ Ba',
+      'Wednesday': 'Thứ Tư',
+      'Thursday': 'Thứ Năm',
+      'Friday': 'Thứ Sáu',
+      'Saturday': 'Thứ Bảy',
+      'Sunday': 'Chủ Nhật'
+    };
+    
+    return (
+      <div className="schedule-table">
+        {workSchedule.map((schedule, index) => (
+          <div key={index} className="schedule-row">
+            <div className="day">{daysOfWeek[schedule.dayOfTheWeek]}</div>
+            <div className="hours">
+              {schedule.openingHours} - {schedule.closingHours}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Hàm mapping trạng thái từ API sang text tiếng Việt
+  const mapStatusToText = (status) => {
+    switch (status) {
+      case 'PENDING':
+        return 'ĐANG CHỜ';
+      case 'CONFIRMED':
+        return 'ĐÃ XÁC NHẬN';
+      case 'CANCELLED':
+        return 'ĐÃ HỦY';
+      default:
+        return 'KHÔNG XÁC ĐỊNH';
     }
   };
 
@@ -385,36 +962,28 @@ const StadiumDetailPage = () => {
     );
   }
 
-  // Hàm tính tổng giá khi đặt sân
   const calculateTotalPrice = () => {
-    if (!stadium || !selectedTimeSlot) return 0;
-    
-    const selectedSlot = availableTimeSlots.find(slot => slot.id === selectedTimeSlot);
-    if (!selectedSlot) return 0;
-    
-    // Phân tích giờ để tính số giờ thuê
-    const startHour = parseInt(selectedSlot.start.split(':')[0]);
-    const endHour = parseInt(selectedSlot.end.split(':')[0]);
-    const hours = endHour - startHour;
-    
+    if (!stadium || !bookingData.startTime || !bookingData.endTime) return 0;
+
+    const start = new Date(`1970-01-01T${bookingData.startTime}:00`);
+    const end = new Date(`1970-01-01T${bookingData.endTime}:00`);
+    const hours = (end - start) / (1000 * 60 * 60);
     return stadium.price * hours;
   };
 
-  // Hàm tính rating trung bình
   const calculateAverageRating = () => {
     if (!evaluations || evaluations.length === 0) return 0;
-    
+
     const validRatings = evaluations
       .map(e => getEvaluationRating(e))
       .filter(r => r > 0);
-    
+
     if (validRatings.length === 0) return 0;
-    
+
     const sum = validRatings.reduce((total, rating) => total + rating, 0);
     return (sum / validRatings.length).toFixed(1);
   };
 
-  // Format ngày theo định dạng Việt Nam
   const formatDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -425,22 +994,20 @@ const StadiumDetailPage = () => {
     });
   };
 
-  // Tạo UI cho rating stars
   const renderRatingStars = (rating) => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
       stars.push(
-        <FontAwesomeIcon 
-          key={i} 
-          icon={faStar} 
-          className={i <= rating ? 'star filled' : 'star empty'} 
+        <FontAwesomeIcon
+          key={i}
+          icon={faStar}
+          className={i <= rating ? 'star filled' : 'star empty'}
         />
       );
     }
     return stars;
   };
 
-  // Lấy URL hình ảnh sân
   const getStadiumImageUrl = () => {
     if (stadiumImage && stadiumImage.imageUrl) {
       return `${process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080'}${stadiumImage.imageUrl}`;
@@ -448,90 +1015,23 @@ const StadiumDetailPage = () => {
     return '/stadium-placeholder.jpg';
   };
 
-  // Hàm lấy địa chỉ đầy đủ
-  const getFullAddress = () => {
-    if (!location) return "Đang cập nhật địa chỉ...";
+  // Thêm hàm để tính tổng số giờ đặt sân
+  const calculateTotalHours = () => {
+    if (!bookingData.startTime || !bookingData.endTime) return 0;
     
-    const parts = [];
-    if (location.address) parts.push(location.address);
-    if (location.district) parts.push(location.district);
-    if (location.city) parts.push(location.city);
-    if (location.province) parts.push(location.province);
+    const startTime = new Date(`1970-01-01T${bookingData.startTime}`);
+    const endTime = new Date(`1970-01-01T${bookingData.endTime}`);
     
-    return parts.join(", ") || "Chưa có thông tin địa chỉ";
-  };
-
-  // Lấy tên người dùng đầy đủ
-  const getUserFullName = (userId) => {
-    const user = evaluationUsers[userId];
-    if (!user) return 'Người dùng';
+    // Tính số giờ (chênh lệch tính bằng mili giây, chia cho số mili giây trong 1 giờ)
+    const diffHours = (endTime - startTime) / (1000 * 60 * 60);
     
-    const firstName = user.firstname || user.firstName || '';
-    const lastName = user.lastname || user.lastName || '';
-    const fullName = user.fullName || '';
-    const username = user.username || '';
-    
-    if (fullName) return fullName;
-    if (firstName || lastName) return `${firstName} ${lastName}`.trim();
-    if (username) return username;
-    
-    return 'Người dùng';
-  };
-
-  // Lấy giá trị đánh giá (rating)
-  const getEvaluationRating = (evaluation) => {
-    if (!evaluation) return 0;
-    
-    const rating = evaluation.rating || 
-                  evaluation.ratingScore || 
-                  evaluation.ratingValue || 
-                  evaluation.score || 
-                  evaluation.value || 
-                  0;
-    
-    return Number(rating) || 0;
-  };
-
-  // Lấy nội dung đánh giá
-  const getEvaluationContent = (evaluation) => {
-    console.log('Evaluation data:', evaluation);  // Log để debug nội dung đánh giá
-    
-    // Hỗ trợ tất cả các định dạng trường có thể có từ API
-    const content = evaluation.content || 
-                   evaluation.evaluationContent || 
-                   evaluation.comment || 
-                   evaluation.text || 
-                   evaluation.description || 
-                   evaluation.message;
-    
-    // Nếu có phần data.data, kiểm tra xem có nội dung trong đó không
-    if (evaluation.data && typeof evaluation.data === 'object') {
-      const dataContent = evaluation.data.content || 
-                         evaluation.data.evaluationContent || 
-                         evaluation.data.comment || 
-                         evaluation.data.text;
-      if (dataContent) return dataContent;
-    }
-    
-    // In toàn bộ các key của evaluation để debug
-    console.log('Evaluation keys:', Object.keys(evaluation));
-    
-    // Trường hợp là chuỗi trực tiếp
-    if (typeof evaluation === 'string') return evaluation;
-    
-    // Trả về nội dung nếu có, hoặc chuỗi rỗng nếu không có
-    return content || '';
-  };
-
-  // Lấy ID người dùng từ đánh giá
-  const getUserId = (evaluation) => {
-    return evaluation.userId || evaluation.user_id;
+    return Math.round(diffHours * 100) / 100; // Làm tròn đến 2 chữ số thập phân
   };
 
   return (
     <div className="stadium-detail-page">
       <Navbar />
-      
+
       <div className="stadium-detail-container">
         <div className="container">
           <div className="breadcrumbs">
@@ -541,7 +1041,7 @@ const StadiumDetailPage = () => {
             <span className="separator">/</span>
             <span className="current">{stadium.stadiumName}</span>
           </div>
-          
+
           <div className="stadium-detail-content">
             <div className="stadium-header">
               <h1 className="stadium-title">{stadium.stadiumName}</h1>
@@ -555,21 +1055,21 @@ const StadiumDetailPage = () => {
                 <span className="full-address">{getFullAddress()}</span>
               </div>
             </div>
-            
+
             <div className="stadium-gallery">
               <div className="main-image">
-                <img 
-                  src={getStadiumImageUrl()} 
-                  alt={stadium.stadiumName} 
+                <img
+                  src={getStadiumImageUrl()}
+                  alt={stadium.stadiumName}
                   onError={(e) => {
                     e.target.onerror = null;
                     e.target.src = '/stadium-placeholder.jpg';
                   }}
                 />
-                <div className="stadium-type">{type ? type.typeName : 'Không xác định'}</div>
+                <div className="stadium-type">{getTypeName(type)}</div>
               </div>
             </div>
-            
+
             <div className="stadium-info-booking">
               <div className="stadium-info">
                 <div className="stadium-meta">
@@ -579,7 +1079,7 @@ const StadiumDetailPage = () => {
                   </div>
                   <div className="meta-item">
                     <FontAwesomeIcon icon={faFutbol} className="meta-icon" />
-                    <span>{type ? (type.typeName || type.name || 'Không xác định') : 'Không xác định'}</span>
+                    <span>{getTypeName(type)}</span>
                   </div>
                   <div className="meta-item">
                     <FontAwesomeIcon icon={faMoneyBillWave} className="meta-icon" />
@@ -587,91 +1087,90 @@ const StadiumDetailPage = () => {
                   </div>
                   <div className="meta-item">
                     <FontAwesomeIcon icon={stadium.status === 'AVAILABLE' ? faCheckCircle : faTimesCircle} className="meta-icon" />
-                    <span className={`status ${stadium.status?.toLowerCase() || 'available'}`}>
-                      {stadium.status === 'AVAILABLE' ? 'Còn trống' : 
-                       stadium.status === 'MAINTENANCE' ? 'Bảo trì' : 
-                       stadium.status === 'BOOKED' ? 'Đã đặt' : 'Còn trống'}
+                    <span className={`status ${stadium.status?.toLowerCase() || ''}`}>
+                      {stadium.status === 'AVAILABLE' ? 'Còn trống' :
+                       stadium.status === 'MAINTENANCE' ? 'Bảo trì' :
+                       stadium.status === 'BOOKED' ? 'Đã đặt' : stadium.status}
                     </span>
                   </div>
                 </div>
-                
+
                 <div className="stadium-description">
                   <h3>Giới thiệu sân</h3>
                   <p>{stadium.description || 'Không có mô tả cho sân bóng này.'}</p>
                 </div>
-                
+
                 <div className="stadium-evaluations">
                   <h3>Đánh giá từ người dùng</h3>
-                  
+
                   {isAuthenticated && (
                     <div className="evaluation-form-container">
                       <h4>Viết đánh giá của bạn</h4>
-                      
+
                       {evaluationSuccess && (
                         <div className="evaluation-success">
                           <FontAwesomeIcon icon={faCheckCircle} />
                           <p>Đánh giá của bạn đã được gửi thành công!</p>
                         </div>
                       )}
-                      
+
                       {evaluationError && (
                         <div className="evaluation-error">
                           <FontAwesomeIcon icon={faTimesCircle} />
                           <p>{evaluationError}</p>
                         </div>
                       )}
-                      
+
                       <form onSubmit={handleEvaluationSubmit} className="evaluation-form">
                         <div className="rating-selector">
                           <span>Đánh giá của bạn: </span>
                           <div className="rating-stars">
                             {[1, 2, 3, 4, 5].map(star => (
-                              <FontAwesomeIcon 
+                              <FontAwesomeIcon
                                 key={star}
-                                icon={faStar} 
-                                className={star <= evaluationForm.rating ? 'star filled clickable' : 'star empty clickable'} 
+                                icon={faStar}
+                                className={star <= evaluationForm.rating ? 'star filled clickable' : 'star empty clickable'}
                                 onClick={() => handleRatingChange(star)}
                               />
                             ))}
                           </div>
                         </div>
-                        
-                        <textarea 
+
+                        <textarea
                           placeholder="Chia sẻ trải nghiệm của bạn..."
                           value={evaluationForm.content}
                           onChange={handleEvaluationContentChange}
                           className="evaluation-content"
                           rows={4}
                         />
-                        
+
                         <button type="submit" className="submit-evaluation">
                           Gửi đánh giá
                         </button>
                       </form>
                     </div>
                   )}
-                  
+
                   {!isAuthenticated && (
                     <div className="login-prompt">
-                      <p>Vui lòng <a href="#" onClick={(e) => {
-                        e.preventDefault();
-                        // Sửa để mở modal đăng nhập thay vì đăng ký
-                        document.querySelectorAll('.navbar-action-button')[1].click();
-                      }}>đăng nhập</a> để viết đánh giá.</p>
+                      <p>Vui lòng <span style={{ color: '#1a4297', cursor: 'default' }}>đăng nhập</span> để viết đánh giá.</p>
                     </div>
                   )}
-                  
+
                   <div className="evaluations-list">
                     {evaluations.length === 0 ? (
                       <p className="no-evaluations">Chưa có đánh giá nào cho sân này.</p>
                     ) : (
-                      evaluations.map((evaluation, index) => (
+                      <>
+                        {evaluations
+                          .slice((currentPage - 1) * evaluationsPerPage, currentPage * evaluationsPerPage)
+                          .map((evaluation, index) => (
                         <div key={evaluation.evaluationId || evaluation.id || index} className="evaluation-item">
                           <div className="evaluation-header">
                             <div className="user-name-field">
                               <FontAwesomeIcon icon={faUser} className="user-icon" />
                               <span className="user-name">
-                                {getUserFullName(getUserId(evaluation))}
+                                {handleUserDisplay(evaluation)}
                               </span>
                             </div>
                             <div className="evaluation-rating">
@@ -689,33 +1188,89 @@ const StadiumDetailPage = () => {
                           </div>
                         </div>
                       ))
+                        }
+                        
+                        {evaluations.length > evaluationsPerPage && (
+                          <div className="pagination">
+                            <button 
+                              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                              disabled={currentPage === 1}
+                            >
+                              Trang trước
+                            </button>
+                            
+                            <span>Trang {currentPage} / {Math.ceil(evaluations.length / evaluationsPerPage)}</span>
+                            
+                            <button 
+                              onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(evaluations.length / evaluationsPerPage)))}
+                              disabled={currentPage === Math.ceil(evaluations.length / evaluationsPerPage)}
+                            >
+                              Trang sau
+                            </button>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
               </div>
-              
+
               <div className="booking-section">
                 <h3>Đặt sân</h3>
-                
+
+                <div className="stadium-operating-hours">
+                  <h4><FontAwesomeIcon icon={faClock} /> Giờ mở cửa</h4>
+                  {renderWorkSchedule()}
+                </div>
+
                 {bookingSuccess && (
                   <div className="booking-success">
                     <FontAwesomeIcon icon={faCheckCircle} />
                     <p>Đặt sân thành công! Đang chuyển hướng đến trang chi tiết đặt sân...</p>
                   </div>
                 )}
-                
+
                 {bookingError && (
                   <div className="booking-error">
                     <FontAwesomeIcon icon={faTimesCircle} />
                     <p>{bookingError}</p>
                   </div>
                 )}
-                
+
+                {bookingData.dateOfBooking && isAuthenticated && (
+                  <div className="booked-time-slots">
+                    <h4>Khung giờ đã được đặt trong ngày {new Date(bookingData.dateOfBooking).toLocaleDateString('vi-VN')}:</h4>
+                    {bookedTimeSlots.length === 0 ? (
+                      <p className="no-booked-slots">Chưa có khung giờ nào được đặt trong ngày này.</p>
+                    ) : (
+                      <div className="booked-slots-list">
+                        {bookedTimeSlots.map((slot, index) => (
+                          <div key={index} className="booked-slot-card">
+                            <div className="slot-time">
+                              <FontAwesomeIcon icon={faClock} className="time-icon" />
+                              <span className="time-value">{slot.startTime} - {slot.endTime}</span>
+                              </div>
+                            <div className={`slot-status status-${slot.status.toLowerCase()}`}>
+                              {mapStatusToText(slot.status)}
+                        </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {bookingData.dateOfBooking && !isAuthenticated && (
+                  <div className="booked-time-slots">
+                    <p>Vui lòng <span style={{ color: '#1a4297', cursor: 'default' }}>đăng nhập</span> để xem khung giờ đã đặt.</p>
+                  </div>
+                )}
+
                 <form onSubmit={handleBookingSubmit} className="booking-form">
                   <div className="form-group">
                     <label>Chọn ngày:</label>
-                    <input 
-                      type="date" 
+                    <input
+                      type="date"
                       value={bookingData.dateOfBooking}
                       onChange={handleDateChange}
                       className="form-control"
@@ -723,25 +1278,166 @@ const StadiumDetailPage = () => {
                       min={new Date().toISOString().split('T')[0]}
                     />
                   </div>
-                  
+
                   {bookingData.dateOfBooking && (
                     <div className="form-group">
-                      <label>Chọn khung giờ:</label>
-                      <div className="time-slots">
-                        {availableTimeSlots.map(slot => (
-                          <div 
-                            key={slot.id}
-                            className={`time-slot ${!slot.available ? 'unavailable' : ''} ${selectedTimeSlot === slot.id ? 'selected' : ''}`}
-                            onClick={() => handleTimeSlotSelect(slot)}
-                          >
-                            {slot.time}
-                            {!slot.available && <span className="unavailable-label">Đã đặt</span>}
-                          </div>
-                        ))}
+                      <label>Chọn giờ bắt đầu
+                        <span className="working-hours-hint">
+                          ({workingHours.openingHours} - {workingHours.closingHours})
+                        </span>
+                      </label>
+                      <div className="time-input-wrapper">
+                      <input
+                          type="text"
+                          placeholder="HH:MM"
+                          pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
+                          value={bookingData.startTime}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (
+                              value === '' ||
+                              /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value) ||
+                              /^([01]?[0-9]|2[0-3]):[0-5]?$/.test(value) ||
+                              /^([01]?[0-9]|2[0-3]):?$/.test(value) ||
+                              /^([01]?[0-9]|2[0-3])$/.test(value)
+                            ) {
+                              handleStartTimeChange({ target: { value } });
+                            }
+                          }}
+                          onBlur={(e) => {
+                            const value = e.target.value;
+                            if (value && !/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value)) {
+                              setTimeError('Vui lòng nhập thời gian theo định dạng HH:MM (ví dụ: 08:13).');
+                              handleStartTimeChange({ target: { value: '' } });
+                            } else if (value) {
+                              const [hourStr, minuteStr] = value.split(':');
+                              const hour = parseInt(hourStr, 10);
+                              const minute = parseInt(minuteStr, 10);
+                              const openingHour = parseInt(workingHours.openingHours.split(':')[0], 10);
+                              const openingMinute = parseInt(workingHours.openingHours.split(':')[1], 10);
+                              const closingHour = parseInt(workingHours.closingHours.split(':')[0], 10);
+                              const closingMinute = parseInt(workingHours.closingHours.split(':')[1], 10);
+
+                              const startMinutes = hour * 60 + minute;
+                              const openingMinutes = openingHour * 60 + openingMinute;
+                              const closingMinutes = closingHour * 60 + closingMinute;
+
+                              if (startMinutes < openingMinutes || startMinutes >= closingMinutes) {
+                                handleStartTimeChange({ target: { value: '' } });
+                                setTimeError(`Vui lòng chọn thời gian trong khoảng ${workingHours.openingHours} - ${workingHours.closingHours}.`);
+                              } else {
+                                const formattedValue = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                                handleStartTimeChange({ target: { value: formattedValue } });
+                              }
+                            }
+                          }}
+                          className={`form-control custom-time-input ${timeError ? 'error' : ''}`}
+                          required
+                        />
+                        <select
+                          className="quick-time-select"
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              handleStartTimeChange({ target: { value: e.target.value } });
+                            }
+                          }}
+                          value=""
+                        >
+                          <option value="">Giờ nhanh</option>
+                          {generateTimeOptions(
+                            parseInt(workingHours.openingHours.split(':')[0], 10),
+                            parseInt(workingHours.closingHours.split(':')[0], 10) - 1
+                          ).map(time => (
+                            <option key={time} value={time}>{time}</option>
+                          ))}
+                        </select>
                       </div>
                     </div>
                   )}
-                  
+
+                  {bookingData.dateOfBooking && (
+                    <div className="form-group">
+                      <label>Chọn giờ kết thúc
+                        <span className="working-hours-hint">
+                          ({workingHours.openingHours} - {workingHours.closingHours})
+                        </span>
+                      </label>
+                      <div className="time-input-wrapper">
+                      <input
+                          type="text"
+                          placeholder="HH:MM"
+                          pattern="([01]?[0-9]|2[0-3]):[0-5][0-9]"
+                          value={bookingData.endTime}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (
+                              value === '' ||
+                              /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value) ||
+                              /^([01]?[0-9]|2[0-3]):[0-5]?$/.test(value) ||
+                              /^([01]?[0-9]|2[0-3]):?$/.test(value) ||
+                              /^([01]?[0-9]|2[0-3])$/.test(value)
+                            ) {
+                              handleEndTimeChange({ target: { value } });
+                            }
+                          }}
+                          onBlur={(e) => {
+                            const value = e.target.value;
+                            if (value && !/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value)) {
+                              setTimeError('Vui lòng nhập thời gian theo định dạng HH:MM (ví dụ: 09:22).');
+                              handleEndTimeChange({ target: { value: '' } });
+                            } else if (value) {
+                              const [hourStr, minuteStr] = value.split(':');
+                              const hour = parseInt(hourStr, 10);
+                              const minute = parseInt(minuteStr, 10);
+                              const openingHour = parseInt(workingHours.openingHours.split(':')[0], 10);
+                              const openingMinute = parseInt(workingHours.openingHours.split(':')[1], 10);
+                              const closingHour = parseInt(workingHours.closingHours.split(':')[0], 10);
+                              const closingMinute = parseInt(workingHours.closingHours.split(':')[1], 10);
+
+                              const endMinutes = hour * 60 + minute;
+                              const openingMinutes = openingHour * 60 + openingMinute;
+                              const closingMinutes = closingHour * 60 + closingMinute;
+
+                              if (endMinutes <= openingMinutes || endMinutes > closingMinutes) {
+                                handleEndTimeChange({ target: { value: '' } });
+                                setTimeError(`Vui lòng chọn thời gian trong khoảng ${workingHours.openingHours} - ${workingHours.closingHours}.`);
+                              } else {
+                                const formattedValue = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                                handleEndTimeChange({ target: { value: formattedValue } });
+                              }
+                            }
+                          }}
+                          className={`form-control custom-time-input ${timeError ? 'error' : ''}`}
+                          required
+                        />
+                        <select
+                          className="quick-time-select"
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              handleEndTimeChange({ target: { value: e.target.value } });
+                            }
+                          }}
+                          value=""
+                        >
+                          <option value="">Giờ nhanh</option>
+                          {generateTimeOptions(
+                            parseInt(workingHours.openingHours.split(':')[0], 10) + 1,
+                            parseInt(workingHours.closingHours.split(':')[0], 10)
+                          ).map(time => (
+                            <option key={time} value={time}>{time}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {timeError && (
+                    <div className="booking-error">
+                      <FontAwesomeIcon icon={faTimesCircle} />
+                      <p>{timeError}</p>
+                    </div>
+                  )}
+
                   <div className="booking-summary">
                     <h4>Thông tin đặt sân</h4>
                     <div className="summary-item">
@@ -754,32 +1450,29 @@ const StadiumDetailPage = () => {
                         <span>{new Date(bookingData.dateOfBooking).toLocaleDateString()}</span>
                       </div>
                     )}
-                    {selectedTimeSlot && (
+                    {bookingData.startTime && bookingData.endTime && (
                       <div className="summary-item">
                         <span>Giờ:</span>
-                        <span>{availableTimeSlots.find(slot => slot.id === selectedTimeSlot)?.time}</span>
+                        <span>{`${bookingData.startTime} - ${bookingData.endTime}`}</span>
                       </div>
                     )}
                     <div className="summary-item total">
-                      <span>Tổng tiền:</span>
+                      <span>Tổng tiền tạm tính:</span>
                       <span>{calculateTotalPrice().toLocaleString()} VNĐ</span>
                     </div>
                   </div>
-                  
-                  <button 
-                    type="submit" 
+
+                  <button
+                    type="submit"
                     className="booking-button"
-                    disabled={!isAuthenticated || !bookingData.dateOfBooking || !selectedTimeSlot || stadium.status === 'MAINTENANCE' || stadium.status === 'BOOKED' || bookingSuccess}
+                    disabled={!isAuthenticated || !bookingData.dateOfBooking || !bookingData.startTime || !bookingData.endTime || timeError || stadium.status === 'MAINTENANCE' || stadium.status === 'BOOKED' || bookingSuccess}
                   >
                     {!isAuthenticated ? 'Vui lòng đăng nhập để đặt sân' : 'Đặt sân ngay'}
                   </button>
-                  
+
                   {!isAuthenticated && (
                     <div className="login-prompt">
-                      <p>Vui lòng <a href="#" onClick={(e) => {
-                        e.preventDefault();
-                        document.querySelector('.navbar-action-button').click();
-                      }}>đăng nhập</a> để đặt sân.</p>
+                      <p>Vui lòng <span style={{ color: '#1a4297', cursor: 'default' }}>đăng nhập</span> để đặt sân.</p>
                     </div>
                   )}
                 </form>
@@ -788,8 +1481,22 @@ const StadiumDetailPage = () => {
           </div>
         </div>
       </div>
-      
+
       <Footer />
+
+      <BookingConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={confirmBooking}
+        stadium={stadium}
+        location={location}
+        type={type}
+        bookingData={bookingData}
+        currentUser={currentUser}
+        calculateTotalHours={calculateTotalHours}
+        formatDate={formatDate}
+        isLoading={isProcessingBooking}
+      />
     </div>
   );
 };

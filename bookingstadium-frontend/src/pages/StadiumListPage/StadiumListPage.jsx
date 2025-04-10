@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faStar, faMapMarkerAlt, faTag, faMoneyBillWave, faFutbol, faCheckCircle, faTimesCircle, faBuilding, faCity, faBasketballBall, faVolleyballBall, faTableTennis, faCalendarPlus, faLocationArrow, faInfoCircle } from '@fortawesome/free-solid-svg-icons';
-import { stadiumAPI, typeAPI, locationAPI, imageAPI, apiClient } from '../../services/apiService';
+import { faStar, faMapMarkerAlt, faMoneyBillWave, faFutbol, faBasketballBall, faVolleyballBall, faTableTennis, faLocationArrow, faInfoCircle} from '@fortawesome/free-solid-svg-icons';
+import { stadiumAPI, typeAPI, locationAPI, imageAPI} from '../../services/apiService';
 import './StadiumListPage.css';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
@@ -15,17 +15,6 @@ const availableIcons = [
   { name: 'Cầu lông', icon: faTableTennis }
 ];
 
-// Mảng các màu có sẵn
-const availableColors = [
-  { name: 'Xanh lá', color: '#28a745' },
-  { name: 'Cam', color: '#fd7e14' },
-  { name: 'Đỏ', color: '#dc3545' },
-  { name: 'Tím', color: '#6f42c1' },
-  { name: 'Xanh dương', color: '#1a4297' },
-  { name: 'Vàng', color: '#ffc107' },
-  { name: 'Hồng', color: '#e83e8c' },
-  { name: 'Lam', color: '#17a2b8' }
-];
 
 const StadiumListPage = () => {
   const [stadiums, setStadiums] = useState([]);
@@ -34,6 +23,8 @@ const StadiumListPage = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const stadiumsPerPage = 9;
   const [stadiumImages, setStadiumImages] = useState({});
   
   // State cấu hình hiển thị (chỉ đọc)
@@ -123,6 +114,16 @@ const StadiumListPage = () => {
       // Hiển thị chi tiết stadium đầu tiên để debug
       if (processedStadiums.length > 0) {
         console.log('>> Mẫu stadium đầu tiên:', processedStadiums[0]);
+        // Hiển thị trạng thái sân
+        console.log('>> Trạng thái sân đầu tiên:', processedStadiums[0].status);
+        // Log trạng thái của tất cả sân
+        console.log('>> Thống kê trạng thái của tất cả sân:');
+        const statusStats = {};
+        processedStadiums.forEach(stadium => {
+          const status = stadium.status || 'KHÔNG XÁC ĐỊNH';
+          statusStats[status] = (statusStats[status] || 0) + 1;
+        });
+        console.log(statusStats);
       }
       
       // Cập nhật state ban đầu với dữ liệu sân
@@ -238,8 +239,8 @@ const StadiumListPage = () => {
                 ...stadium,
                 location: matchingLocation, // Lưu toàn bộ thông tin location
                 locationName: matchingLocation.locationName || matchingLocation.name || matchingLocation.location_name,
-                address: matchingLocation.address,
                 district: matchingLocation.district,
+                address: matchingLocation.address,
                 city: matchingLocation.city
               };
             }
@@ -293,8 +294,8 @@ const StadiumListPage = () => {
                   ...stadium,
                   location: matchingLocation,
                   locationName: matchingLocation.locationName || matchingLocation.name || matchingLocation.location_name,
-                  address: matchingLocation.address,
                   district: matchingLocation.district,
+                  address: matchingLocation.address,
                   city: matchingLocation.city
                 };
               }
@@ -349,8 +350,8 @@ const StadiumListPage = () => {
                     ...stadium,
                     location: locationData,
                     locationName: locationData.locationName || locationData.name || locationData.location_name,
-                    address: locationData.address,
                     district: locationData.district,
+                    address: locationData.address,
                     city: locationData.city
                   };
                 }
@@ -360,8 +361,8 @@ const StadiumListPage = () => {
                   ...stadium,
                   location: matchingStadiumLoc,
                   locationName: matchingStadiumLoc.locationName || matchingStadiumLoc.name || matchingStadiumLoc.location_name,
-                  address: matchingStadiumLoc.address,
                   district: matchingStadiumLoc.district,
+                  address: matchingStadiumLoc.address,
                   city: matchingStadiumLoc.city
                 };
               }
@@ -407,8 +408,8 @@ const StadiumListPage = () => {
                     ...enhancedStadiums[index],
                     location: locationData,
                     locationName: locationData.locationName || locationData.name || locationData.location_name,
-                    address: locationData.address,
                     district: locationData.district,
+                    address: locationData.address,
                     city: locationData.city
                   };
                   locationUpdated = true;
@@ -436,8 +437,8 @@ const StadiumListPage = () => {
                       ...enhancedStadiums[index],
                       location: altLocationData,
                       locationName: altLocationData.locationName || altLocationData.name || altLocationData.location_name,
-                      address: altLocationData.address,
                       district: altLocationData.district,
+                      address: altLocationData.address,
                       city: altLocationData.city
                     };
                     locationUpdated = true;
@@ -532,6 +533,7 @@ const StadiumListPage = () => {
   
   const handleTypeChange = (typeId) => {
     setSelectedType(typeId);
+    setCurrentPage(1);
   };
   
   const handleSearchSubmit = (e) => {
@@ -547,6 +549,27 @@ const StadiumListPage = () => {
       return nameMatch && typeMatch;
     });
   }, [stadiums, searchTerm, selectedType]);
+  
+  // Tính toán phân trang
+  const totalPages = Math.ceil(filteredStadiums.length / stadiumsPerPage);
+  const indexOfLastStadium = currentPage * stadiumsPerPage;
+  const indexOfFirstStadium = indexOfLastStadium - stadiumsPerPage;
+  const currentStadiums = filteredStadiums.slice(indexOfFirstStadium, indexOfLastStadium);
+
+  // Xử lý chuyển trang
+  const handlePrevPage = () => {
+    setCurrentPage(prev => Math.max(prev - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    const maxPage = Math.ceil(filteredStadiums.length / stadiumsPerPage);
+    setCurrentPage(prev => Math.min(prev + 1, maxPage));
+  };
+
+  // Reset về trang 1 khi thay đổi bộ lọc
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedType]);
   
   // Đếm số lượng sân theo từng loại
   const getStadiumCountByType = (typeId) => {
@@ -566,52 +589,24 @@ const StadiumListPage = () => {
   
   // Lấy thông tin địa điểm từ locationId hoặc location object
   const getLocationName = (stadium) => {
-    // Kiểm tra các trường hợp có thể trong API
-    console.log('>> Trích xuất location name cho stadium:', stadium.stadiumId || stadium.id);
-    
-    // Trường hợp thuộc tính đã được trích xuất trực tiếp
-    if (stadium.locationName) return stadium.locationName;
-    
-    // Nếu có location object
-    if (stadium.location && typeof stadium.location === 'object') {
-      console.log('>> Stadium có object location:', stadium.location);
-      if (stadium.location.name) return stadium.location.name;
-      if (stadium.location.locationName) return stadium.location.locationName;
-      if (stadium.location.location_name) return stadium.location.location_name;
-    }
-    
-    // Trường hợp trả về trực tiếp
-    if (stadium.location_name) return stadium.location_name;
-    
-    return "Chưa cập nhật tên địa điểm";
-  };
-  
-  const getLocationAddress = (stadium) => {
-    // Trường hợp thuộc tính đã được trích xuất trực tiếp
-    if (stadium.address) return stadium.address;
-    
-    // Nếu có location object
-    if (stadium.location && typeof stadium.location === 'object') {
-      if (stadium.location.address) return stadium.location.address;
-      if (stadium.location.locationAddress) return stadium.location.locationAddress;
-    }
-    
-    // Trường hợp trả về trực tiếp
-    if (stadium.locationAddress) return stadium.locationAddress;
-    
-    return "Chưa cập nhật địa chỉ";
+    if (!stadium) return '';
+    return stadium.locationName || 'Chưa có thông tin';
   };
   
   const getDistrict = (stadium) => {
-    // Trường hợp thuộc tính đã được trích xuất trực tiếp
-    if (stadium.district) return stadium.district;
+    if (!stadium) return '';
+    return stadium.district || 'Chưa có thông tin';
+  };
+
+  const getLocationAddress = (stadium) => {
+    if (!stadium) return '';
+    const address = stadium.address || '';
+    const district = stadium.district || '';
+    const city = stadium.city || '';
     
-    // Nếu có location object
-    if (stadium.location && typeof stadium.location === 'object') {
-      if (stadium.location.district) return stadium.location.district;
-    }
-    
-    return "Chưa cập nhật quận/huyện";
+    return [address, district, city]
+      .filter(part => part && part.trim() !== '')
+      .join(', ');
   };
   
   const getCity = (stadium) => {
@@ -628,99 +623,58 @@ const StadiumListPage = () => {
   
   // Lấy giá sân từ API
   const getStadiumPrice = (stadium) => {
-    // Nếu có thông tin price, hiển thị theo định dạng VND
-    if (stadium.price) {
-      // Sử dụng toLocaleString để định dạng số tiền theo tiền tệ Việt Nam
-      return `${stadium.price.toLocaleString('vi-VN')} VNĐ/giờ`;
-    }
-    
-    // Trường hợp không có thông tin giá
-    return "Liên hệ để biết giá";
+    if (!stadium || !stadium.price) return 'Liên hệ';
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
+    }).format(stadium.price);
   };
   
   // Lấy hình ảnh từ API nếu có, ngược lại dùng ảnh mặc định
   const getStadiumImage = (stadium) => {
-    // URL cố định đến backend
-    const BASE_URL = 'http://localhost:8080';
+    if (!stadium) return '/stadium-placeholder.jpg';
     
-    // Lấy stadiumId từ stadium
     const stadiumId = stadium.stadiumId || stadium.id;
+    if (!stadiumId) return '/stadium-placeholder.jpg';
     
-    // Kiểm tra nếu có ảnh trong stadiumImages
-    if (stadiumImages[stadiumId]) {
-      const imageUrl = stadiumImages[stadiumId];
-      
-      // Log chi tiết để debug
-      console.log(`>> DEBUG imageUrl cho sân ${stadiumId}: ${imageUrl}`);
-      
-      // Kiểm tra xem imageUrl đã có đường dẫn đầy đủ chưa
-      if (imageUrl.startsWith('http')) {
-        console.log(`>> Sử dụng URL đầy đủ: ${imageUrl}`);
-        return imageUrl;
-      }
-      
-      // Đảm bảo đường dẫn có dấu / ở giữa BASE_URL và imageUrl
-      const fullUrl = `${BASE_URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
-      console.log(`>> Tạo URL đầy đủ: ${fullUrl}`);
-      
-      // Thử truy cập trực tiếp vào ảnh từ uploads folder
-      return fullUrl;
+    const imageUrl = stadiumImages[stadiumId];
+    if (!imageUrl) return '/stadium-placeholder.jpg';
+    
+    // Kiểm tra xem imageUrl có phải là đường dẫn đầy đủ không
+    if (imageUrl.startsWith('http')) {
+      return imageUrl;
     }
     
-    // Không trả về gì nếu không có ảnh
-    console.log(`>> Không tìm thấy ảnh cho sân ${stadiumId}`);
-    return "";
+    // Nếu là đường dẫn tương đối, thêm base URL
+    return `${process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080'}${imageUrl}`;
   };
 
   // Kiểm tra trạng thái sân
   const getStadiumStatus = (stadium) => {
-    // Kiểm tra status nếu có
-    if (stadium.status) {
-      // Chuẩn hóa status: available, booked, maintenance
-      const status = stadium.status.toLowerCase();
-      
-      if (status === 'available' || status === '1' || status === 'true') {
-        return 'AVAILABLE';
-      } else if (status === 'maintenance') {
-        return 'MAINTENANCE';
-      } else {
-        return 'BOOKED';
-      }
-    }
+    if (!stadium || !stadium.status) return { text: 'Không xác định', className: '' };
     
-    // Kiểm tra các trường có thể chứa thông tin trạng thái khác
-    if (stadium.available === false || stadium.isAvailable === false) {
-      return 'BOOKED';
+    switch(stadium.status.toUpperCase()) {
+      case 'AVAILABLE':
+        return { text: 'Còn trống', className: 'available' };
+      case 'BOOKED':
+        return { text: 'Đã đặt', className: 'booked' };
+      case 'MAINTENANCE':
+        return { text: 'Bảo trì', className: 'maintenance' };
+      default:
+        return { text: 'Không xác định', className: '' };
     }
-    
-    // Trường hợp không có thông tin trạng thái, mặc định là có sẵn
-    return 'AVAILABLE';
   };
   
   // Lấy biểu tượng cho mỗi loại sân
   const getTypeIcon = (typeName) => {
-    if (!typeName) return faFutbol;
-    
-    // Kiểm tra xem có cài đặt tùy chỉnh không
-    if (typeStyleSettings[typeName] && typeStyleSettings[typeName].icon) {
-      const iconName = typeStyleSettings[typeName].icon;
-      const iconObj = availableIcons.find(i => i.name === iconName);
-      if (iconObj) return iconObj.icon;
+    // Tìm icon trong mảng availableIcons
+    const typeConfig = availableIcons.find(item => item.name === typeName);
+    if (typeConfig) {
+      return typeConfig.icon;
     }
     
-    // Logic mặc định dựa vào tên
-    const name = typeName.toLowerCase();
-    if (name.includes('bóng đá') || name.includes('football')) {
-      return faFutbol;
-    } else if (name.includes('bóng rổ') || name.includes('basketball')) {
-      return faBasketballBall;
-    } else if (name.includes('bóng chuyền') || name.includes('volleyball')) {
-      return faVolleyballBall;
-    } else if (name.includes('cầu lông') || name.includes('badminton')) {
-      return faTableTennis;
-    }
-    
-    return faFutbol; // Icon mặc định
+    // Nếu không tìm thấy, trả về icon mặc định
+    return faFutbol;
   };
 
   // Lấy màu cho mỗi loại sân
@@ -857,18 +811,8 @@ const StadiumListPage = () => {
               {getStadiumPrice(stadium)}
             </span>
             
-            <span className={`status ${getStadiumStatus(stadium) === 'AVAILABLE' ? 'available' : 'booked'}`}>
-              {getStadiumStatus(stadium) === 'AVAILABLE' ? (
-                <>
-                  <FontAwesomeIcon icon={faCheckCircle} className="status-icon" />
-                  Còn trống
-                </>
-              ) : (
-                <>
-                  <FontAwesomeIcon icon={faTimesCircle} className="status-icon" />
-                  Đã đặt
-                </>
-              )}
+            <span className={`status ${getStadiumStatus(stadium).className}`}>
+              {getStadiumStatus(stadium).text}
             </span>
           </div>
           
@@ -889,11 +833,13 @@ const StadiumListPage = () => {
       
       <div className="main-content">
         <div className="container">
-          <div className="page-stars">
-            <span className="star filled"><FontAwesomeIcon icon={faStar} /></span>
+          <div className="header-content">
+            <div className="star-icon">
+              <FontAwesomeIcon icon={faStar} />
+            </div>
+            <h1 className="page-title">Danh sách sân bãi</h1>
+            <div className="title-underline"></div>
           </div>
-          <h1 className="page-title">Danh sách sân bãi</h1>
-          <div className="title-underline"></div>
           
           <div className="content-wrapper">
             {/* Sidebar với danh sách loại sân từ API */}
@@ -956,9 +902,29 @@ const StadiumListPage = () => {
             
               {!loading && filteredStadiums.length > 0 && (
             <div className="stadium-grid">
-              {filteredStadiums.map(stadium => (
+              {currentStadiums.map(stadium => (
                     renderStadiumCard(stadium)
                   ))}
+                </div>
+              )}
+
+              {filteredStadiums.length > 0 && (
+                <div className="pagination">
+                  <button 
+                    onClick={handlePrevPage} 
+                    disabled={currentPage === 1}
+                  >
+                    Trang trước
+                  </button>
+                  <span>
+                    Trang {currentPage} / {totalPages}
+                  </span>
+                  <button 
+                    onClick={handleNextPage} 
+                    disabled={currentPage === totalPages}
+                  >
+                    Trang sau
+                  </button>
                 </div>
               )}
             </div>

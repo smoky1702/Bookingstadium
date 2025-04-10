@@ -5,12 +5,15 @@ import com.example.bookingStadium.dto.request.Stadium.StadiumCreationRequest;
 import com.example.bookingStadium.dto.request.Stadium.StadiumUpdateRequest;
 import com.example.bookingStadium.dto.response.ApiResponse;
 import com.example.bookingStadium.dto.response.StadiumReponse;
+import com.example.bookingStadium.entity.Booking;
 import com.example.bookingStadium.entity.Stadium;
 import com.example.bookingStadium.service.StadiumService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -38,6 +41,15 @@ public class StadiumController {
     ApiResponse<StadiumReponse> findStadium(@PathVariable("stadiumId") String stadiumId){
         ApiResponse<StadiumReponse> apiResponse = new ApiResponse<>();
         apiResponse.setResult(stadiumService.findStadium(stadiumId));
+        return apiResponse;
+    }
+
+    @GetMapping("/{stadiumId}/booking")
+    ApiResponse<List<Booking>> getStadiumBooking(
+            @PathVariable("stadiumId") String stadiumId,
+            @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        List<Booking> bookings = stadiumService.getStadiumBooking(stadiumId, date);
+        ApiResponse<List<Booking>> apiResponse = new ApiResponse<>(bookings);
         return apiResponse;
     }
 

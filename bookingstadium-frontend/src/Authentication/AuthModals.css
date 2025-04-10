@@ -66,11 +66,13 @@
   
   .form-group {
     margin-bottom: 15px;
+    position: relative;
   }
   
-  .form-control {
+  .form-group input {
     width: 100%;
     padding: 12px 15px;
+    padding-right: 30px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 14px;
@@ -91,6 +93,15 @@
     font-size: 12px;
     color: #e74c3c;
     margin-top: 5px;
+  }
+  
+  .form-group i {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #888;
   }
   
   .auth-button {
