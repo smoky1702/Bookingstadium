@@ -12,6 +12,7 @@ import com.example.bookingStadium.repository.EvaluationRepository;
 import com.example.bookingStadium.repository.StadiumRepository;
 import com.example.bookingStadium.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -30,6 +31,10 @@ public class EvaluationService {
     @Autowired
     private StadiumRepository stadiumRepository;
 
+    @Autowired
+    private SecurityUtils securityUtils;
+
+    @PreAuthorize("hasAuthority('SCOPE_USER')")
     public Evaluation createEvaluation(EvaluationCreationRequest request){
         if(!userRepository.existsById(request.getUserId())){
             System.out.println(request.getUserId());
@@ -38,6 +43,11 @@ public class EvaluationService {
 
         if (!stadiumRepository.existsById(request.getStadiumId())) {
             throw new AppException(ErrorCode.STADIUM_NOT_EXISTED);
+        }
+        
+        // Đảm bảo người dùng chỉ có thể tạo đánh giá cho chính mình
+        if (!securityUtils.isCurrentUser(request.getUserId())) {
+            throw new AppException(ErrorCode.FORBIDDEN);
         }
 
         Evaluation evaluation = evaluationMapper.toEvaluation(request);
@@ -53,16 +63,30 @@ public class EvaluationService {
                 .orElseThrow(() -> new AppException(ErrorCode.EVALUATION_NOT_EXISTED)));
     }
 
+    @PreAuthorize("hasAuthority('SCOPE_USER')")
     public EvaluationResponse updateEvaluation(String evaluationId, EvaluationUpdateRequest request){
         Evaluation evaluation = evaluationRepository.findById(evaluationId)
                 .orElseThrow(() -> new AppException(ErrorCode.EVALUATION_NOT_EXISTED));
+        
+        // Kiểm tra người dùng hiện tại có phải là người tạo đánh giá không
+        if (!securityUtils.isAdmin() && !securityUtils.isCurrentUser(evaluation.getUserId())) {
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+        
         evaluationMapper.updateEvaluation(evaluation, request);
         return evaluationMapper.toEvaluationResponse(evaluationRepository.save(evaluation));
     }
 
+    @PreAuthorize("hasAuthority('SCOPE_USER')")
     public void deleteEvaluation(String evaluationId){
-        evaluationRepository.findById(evaluationId)
+        Evaluation evaluation = evaluationRepository.findById(evaluationId)
                 .orElseThrow(() -> new AppException(ErrorCode.EVALUATION_NOT_EXISTED));
+        
+        // Kiểm tra người dùng hiện tại có phải là người tạo đánh giá không
+        if (!securityUtils.isAdmin() && !securityUtils.isCurrentUser(evaluation.getUserId())) {
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+        
         evaluationRepository.deleteById(evaluationId);
     }
 }

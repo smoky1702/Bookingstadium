@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
 import LoginModal from '../Authentication/LoginModal';
@@ -7,16 +7,53 @@ import SearchModal from '../pages/SearchModal/SearchModal';
 import '../components/Navbar.css';
 
 const Navbar = () => {
-  const { isAuthenticated, currentUser, logout } = useContext(AuthContext);
+  const { isAuthenticated, currentUser, logout, forbiddenError } = useContext(AuthContext);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showErrorToast, setShowErrorToast] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const location = useLocation();
 
   // Thêm console.log để debug
   console.log("Auth state:", { isAuthenticated, currentUser });
+
+  // Hiển thị thông báo lỗi khi có lỗi 403 (không có quyền)
+  useEffect(() => {
+    if (forbiddenError) {
+      setErrorMessage(forbiddenError.message);
+      setShowErrorToast(true);
+      
+      // Tự động ẩn thông báo sau 5 giây
+      const timer = setTimeout(() => {
+        setShowErrorToast(false);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [forbiddenError]);
+
+  // Lắng nghe sự kiện api:forbidden từ apiService
+  useEffect(() => {
+    const handleForbidden = (event) => {
+      setErrorMessage(event.detail.message || 'Bạn không có quyền thực hiện hành động này');
+      setShowErrorToast(true);
+      
+      // Tự động ẩn thông báo sau 5 giây
+      setTimeout(() => {
+        setShowErrorToast(false);
+      }, 5000);
+    };
+    
+    window.addEventListener('api:forbidden', handleForbidden);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('api:forbidden', handleForbidden);
+    };
+  }, []);
 
   // Hàm điều khiển modal
   const openLoginModal = () => {
@@ -70,8 +107,26 @@ const Navbar = () => {
     }
   };
 
+  // Đóng thông báo lỗi
+  const closeErrorToast = () => {
+    setShowErrorToast(false);
+  };
+
   return (
     <>
+      {/* Thông báo lỗi */}
+      {showErrorToast && (
+        <div className="error-toast">
+          <div className="error-toast-content">
+            <i className="fas fa-exclamation-circle"></i>
+            <span>{errorMessage}</span>
+          </div>
+          <button className="error-toast-close" onClick={closeErrorToast}>
+            <i className="fas fa-times"></i>
+          </button>
+        </div>
+      )}
+    
       <nav className="navbar">
         <div className="container navbar-container">
           <Link to="/" onClick={(e) => handleNavLinkClick(e, "/")} className="navbar-logo">
@@ -166,6 +221,9 @@ const Navbar = () => {
                     </Link>
                     <Link to="/bookings" className="dropdown-item" onClick={() => setShowUserDropdown(false)}>
                       <i className="fas fa-calendar-alt"></i> Lịch đặt sân
+                    </Link>
+                    <Link to="/bills" className="dropdown-item" onClick={() => setShowUserDropdown(false)}>
+                      <i className="fas fa-file-invoice-dollar"></i> Hóa đơn
                     </Link>
                     <div className="dropdown-divider"></div>
                     <div className="dropdown-item logout" onClick={handleLogout}>

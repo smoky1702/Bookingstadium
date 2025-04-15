@@ -27,6 +27,20 @@ public class BillController {
         return apiResponse;
     }
 
+    @PostMapping("/user")
+    ApiResponse<Bill> createUserBill(@RequestBody @Valid BillCreationRequest request){
+        ApiResponse<Bill> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(billService.createBill(request));
+        return apiResponse;
+    }
+
+    @PostMapping("/owner")
+    ApiResponse<Bill> createOwnerBill(@RequestBody @Valid BillCreationRequest request){
+        ApiResponse<Bill> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(billService.createBill(request));
+        return apiResponse;
+    }
+
     @GetMapping
     ApiResponse<List<Bill>> getBill(){
         List<Bill> billList = billService.getBill();

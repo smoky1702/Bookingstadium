@@ -52,43 +52,45 @@ public class SecurityConfig {
 
                         // API USER
                         .requestMatchers(HttpMethod.GET, "/users/{userId}").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/users/me").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/users/{userId}").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/bill/{billId}").authenticated() //Chỉnh sửa service
-                        .requestMatchers(HttpMethod.PUT, "/bill/update/{billId}").hasAnyAuthority("SCOPE_USER")
+                        .requestMatchers(HttpMethod.GET, "/bill/{billId}").authenticated()
+                        .requestMatchers(HttpMethod.POST,"/bill/user").hasAuthority("SCOPE_USER")
+                        .requestMatchers(HttpMethod.PUT, "/bill/update/{billId}").hasAnyAuthority("SCOPE_USER", "SCOPE_OWNER")
 
                         // API ADMIN
-                        .requestMatchers(HttpMethod.GET, "/users").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/users").hasAuthority("SCOPE_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/users/{userId}").hasAuthority("SCOPE_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/type", "/PaymentMethod").hasAuthority("SCOPE_ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/type/{typeId}", "/PaymentMethod/{PaymentMethodId}").hasAuthority("SCOPE_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/type/{typeId}", "/PaymentMethod/{PaymentMethodId}").hasAuthority("SCOPE_ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/users/role/{userId}").hasAnyAuthority("SCOPE_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/users/role/{userId}").hasAuthority("SCOPE_ADMIN")
 
                         // API OWNER
                         .requestMatchers(HttpMethod.POST, "/location", "/stadium", "/images/upload"
-                                , "/WorkSchedule", "/bill").hasAuthority("SCOPE_OWNER") // Chỉnh sửa service
+                                , "/WorkSchedule", "/bill/owner").hasAuthority("SCOPE_OWNER")
                         .requestMatchers(HttpMethod.PUT, "/location/{locationId}", "/stadium/{stadiumId}"
-                                , "/images/update/{imageId}", "/WorkSchedule/{WorkScheduleId}", "/bill/paid/{billId}").hasAuthority("SCOPE_OWNER") // Chỉnh sửa service
+                                , "/images/update/{imageId}", "/WorkSchedule/{WorkScheduleId}", "/bill/paid/{billId}").hasAuthority("SCOPE_OWNER")
                         .requestMatchers(HttpMethod.DELETE, "/location/{locationId}", "/stadium/{stadiumId}"
-                                , "/images/upload/{imageId}", "/WorkSchedule/{WorkScheduleId}", "/bill/{billId}").hasAuthority("SCOPE_OWNER") // Chỉnh sửa service
+                                , "/images/upload/{imageId}", "/WorkSchedule/{WorkScheduleId}", "/bill/{billId}").hasAuthority("SCOPE_OWNER")
                         .requestMatchers(HttpMethod.GET, "/bill").hasAnyAuthority
-                                ("SCOPE_OWNER", "SCOPE_ADMIN") // OWNER và ADMIN được xem hóa đơn
+                                ("SCOPE_OWNER", "SCOPE_ADMIN")
 
                         // BOOKING, DETAILS
-                        .requestMatchers(HttpMethod.POST, "/booking", "/details").authenticated() // Chỉnh sửa service
+                        .requestMatchers(HttpMethod.POST, "/booking", "/details").authenticated()
                         .requestMatchers(HttpMethod.GET, "/booking/{bookingId}"
-                                , "/details/{stadiumBookingDetailId}").authenticated() // Chỉnh sửa service
+                                , "/details/{stadiumBookingDetailId}").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/booking/{bookingId}"
-                                , "/details/{stadiumBookingDetailId}").authenticated() // Chỉnh sửa service
+                                , "/details/{stadiumBookingDetailId}").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/booking/{bookingId}"
-                                , "/details/{stadiumBookingDetailId}").authenticated() // Chỉnh sửa service
-                        .requestMatchers(HttpMethod.GET, "/stadium/{stadiumId}/booking?date={date}").authenticated() // Chỉnh sửa service
-                        .requestMatchers(HttpMethod.GET, "/booking", "/details").hasAnyAuthority("SCOPE_ADMIN")
+                                , "/details/{stadiumBookingDetailId}").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/stadium/{stadiumId}/booking/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/booking", "/details").hasAuthority("SCOPE_ADMIN")
 
                         // EVALUATION
                         .requestMatchers(HttpMethod.POST, "/evaluation").hasAuthority("SCOPE_USER")
-                        .requestMatchers(HttpMethod.PUT, "/evaluation/{evaluationId}").hasAuthority("SCOPE_USER") // Chỉnh sửa service
-                        .requestMatchers(HttpMethod.DELETE, "/evaluation/{evaluationId}").hasAuthority("SCOPE_USER") // Chỉnh sửa service
+                        .requestMatchers(HttpMethod.PUT, "/evaluation/{evaluationId}").hasAuthority("SCOPE_USER")
+                        .requestMatchers(HttpMethod.DELETE, "/evaluation/{evaluationId}").hasAuthority("SCOPE_USER")
 
                         .anyRequest().authenticated()
         );

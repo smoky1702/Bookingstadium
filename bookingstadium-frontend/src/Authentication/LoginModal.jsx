@@ -38,7 +38,21 @@ const LoginModal = ({ isOpen, onClose, openRegisterModal }) => {
       }
     } catch (error) {
       console.error('Lỗi đăng nhập:', error);
+      
+      // Xử lý thông báo lỗi chi tiết hơn
+      if (error.response) {
+        if (error.response.status === 403) {
+          setError('Tài khoản của bạn không có quyền truy cập vào hệ thống.');
+        } else if (error.response.status === 401) {
+          setError('Email hoặc mật khẩu không chính xác.');
+        } else if (error.response.data && error.response.data.message) {
+          setError(error.response.data.message);
+        } else {
+          setError('Đăng nhập thất bại. Vui lòng thử lại.');
+        }
+      } else {
       setError('Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.');
+      }
     } finally {
       setLoading(false);
     }
@@ -115,6 +129,7 @@ const LoginModal = ({ isOpen, onClose, openRegisterModal }) => {
             </button>
           </form>
           
+          {/* Ẩn Social Login - Có thể bỏ comment nếu cần
           <div className="social-login-section">
             <p>Hoặc tiếp tục với</p>
             <div className="social-buttons">
@@ -126,6 +141,7 @@ const LoginModal = ({ isOpen, onClose, openRegisterModal }) => {
               </button>
             </div>
           </div>
+          */}
           
           <div className="switch-form">
             <p>Chưa có tài khoản? <span onClick={handleSwitchToRegister}>Đăng ký</span></p>

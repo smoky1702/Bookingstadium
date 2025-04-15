@@ -125,6 +125,14 @@ public class StadiumBookingDetailService {
         }
         return stadiumPrice * totalHours;
     }
+
+    public StadiumBookingDetailResponse findByBookingId(String bookingId) {
+        StadiumBookingDetail detail = stadiumBookingDetailRepository.findByBookingId(bookingId);
+        if (detail == null) {
+            throw new AppException(ErrorCode.BOOKING_DETAIL_NOT_EXISTED);
+        }
+        return stadiumBookingDetailMapper.toStadiumBookingDetailResponse(detail);
+    }
 }
 
 

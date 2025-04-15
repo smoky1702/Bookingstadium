@@ -33,7 +33,10 @@ public class UserService {
     private UserMapper userMapper;
     @Autowired
     private RoleRepository roleRepository;
-
+    @Autowired
+    private EmailService emailService;
+    @Autowired
+    private SecurityUtils securityUtils;
 
 
     public Users createUser(UserCreationRequest request){
@@ -48,11 +51,19 @@ public class UserService {
         user.setRole(roles);
         PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
         user.setPassword(passwordEncoder.encode(request.getPassword()));
+
+        emailService.sendSimpleMessage(
+                user.getEmail(),
+                "Chào mừng bạn đến với hệ thống đặt sân!",
+                "Cảm ơn bạn đã đăng ký. Hãy bắt đầu đặt sân ngay nào!"
+        );
+
+
         return userRepository.save(user);
     }
 
 
-//    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
     public List<Users> getUser(){
         log.info("In method get Users");
         return userRepository.findAll();
@@ -88,22 +99,39 @@ public class UserService {
         Users user = userRepository.findById(user_Id)
                 .orElseThrow(()-> new AppException(ErrorCode.USER_NOT_EXISTED));
         userMapper.updateUser(user, request);
-        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        
+        // Chỉ cập nhật mật khẩu khi được cung cấp
+        if (request.getPassword() != null && !request.getPassword().isEmpty()) {
+            PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+        
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
     public void deleteUser(String user_Id){
         userRepository.findById(user_Id)
                 .orElseThrow(()-> new AppException(ErrorCode.USER_NOT_EXISTED));
         userRepository.deleteById(user_Id);
     }
 
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
     public UserResponse updateRole(String userId, UserUpdateRoleRequest request){
         Users users = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
         users.setRole(request.getRole());
         return userMapper.toUserResponse(userRepository.save(users));
+    }
+
+    public UserResponse findUserByEmail(String email) {
+        Users user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        
+        UserResponse response = userMapper.toUserResponse(user);
+        response.setUser_id(user.getUser_id());
+        
+        return response;
     }
 }

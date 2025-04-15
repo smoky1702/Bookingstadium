@@ -8,6 +8,7 @@ import com.example.bookingStadium.entity.StadiumBookingDetail;
 import com.example.bookingStadium.service.StadiumBookingDetailService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -59,6 +60,14 @@ public class StadiumBookingDetailController {
                 .code(200)
                 .result("Stadium booking detail has been deleted")
                 .build();
+    }
+
+    @GetMapping("/booking/{bookingId}")
+    @PreAuthorize("isAuthenticated() and @securityUtils.isOwnerOfBooking(authentication, #bookingId)")
+    ApiResponse<StadiumBookingDetailResponse> findDetailByBookingId(@PathVariable("bookingId") String bookingId) {
+        ApiResponse<StadiumBookingDetailResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(stadiumBookingDetailService.findByBookingId(bookingId));
+        return apiResponse;
     }
 }
 

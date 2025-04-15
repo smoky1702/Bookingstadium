@@ -192,3 +192,55 @@
     margin-top: 5px;
   }
 }
+
+/* CSS cho thông báo lỗi */
+.error-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #f44336;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 300px;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.error-toast-content {
+  display: flex;
+  align-items: center;
+}
+
+.error-toast-content i {
+  margin-right: 10px;
+  font-size: 18px;
+}
+
+.error-toast-close {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 16px;
+  margin-left: 10px;
+}
+
+.error-toast-close:hover {
+  opacity: 0.8;
+}

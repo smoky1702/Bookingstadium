@@ -40,7 +40,8 @@ const StadiumListPage = () => {
         const settings = JSON.parse(savedSettings);
         setTypeStyleSettings(settings);
       } catch (e) {
-        console.error("Lỗi khi đọc cài đặt từ localStorage:", e);
+        // Bỏ console.error
+        setTypeStyleSettings({});
       }
     }
   }, []);
@@ -51,474 +52,106 @@ const StadiumListPage = () => {
         setLoading(true);
         setError(null);
         
-      // Fetch stadiums
-      console.log('=====================================================');
-      console.log('>> FETCH STADIUMS START');
-      console.log('=====================================================');
-      
-      let processedStadiums = [];
-      
-      try {
-        console.log('>> Sử dụng API stadium thông thường...');
-        // Gọi API thông qua service đã được định nghĩa
-        const response = await stadiumAPI.getStadiums();
-        
-        // Đặt dữ liệu vào state
-        const stadiumData = response.data;
-        console.log('>> Dữ liệu sân:', stadiumData);
-        
-        // In chi tiết cấu trúc đầy đủ của dữ liệu
-        console.log('>> Cấu trúc dữ liệu đầy đủ:', JSON.stringify(stadiumData, null, 2));
-        
-        if (Array.isArray(stadiumData)) {
-          processedStadiums = stadiumData;
-        } else if (stadiumData && Array.isArray(stadiumData.result)) {
-          processedStadiums = stadiumData.result;
-        } else if (stadiumData && Array.isArray(stadiumData.data)) {
-          processedStadiums = stadiumData.data;
-        } else if (stadiumData && Array.isArray(stadiumData.content)) {
-          processedStadiums = stadiumData.content;
-        } else {
-          console.error('>> Không tìm thấy dữ liệu sân trong response:', stadiumData);
-          throw new Error('Không tìm thấy dữ liệu sân trong định dạng mong đợi');
-        }
-      } catch (err) {
-        console.error('>> Lỗi khi lấy thông tin stadiums từ API thông thường:', err);
-        
-        // Thử dùng endpoint thay thế
-        try {
-          console.log('>> Thử API endpoint thay thế...');
-          const alternativeResponse = await stadiumAPI.getStadiumsAlternative();
-          const alternativeData = alternativeResponse.data;
-          
-          if (Array.isArray(alternativeData)) {
-            processedStadiums = alternativeData;
-          } else if (alternativeData && Array.isArray(alternativeData.result)) {
-            processedStadiums = alternativeData.result;
-          } else if (alternativeData && Array.isArray(alternativeData.data)) {
-            processedStadiums = alternativeData.data;
-          } else {
-            throw new Error('Không tìm thấy dữ liệu sân từ endpoint thay thế');
-          }
-        } catch (altErr) {
-          console.error('>> Lỗi khi lấy thông tin stadiums từ endpoint thay thế:', altErr);
-          setError(`Không thể tải dữ liệu sân bóng. Vui lòng đảm bảo backend đang chạy.`);
-          setLoading(false);
-          return; // Kết thúc hàm vì không thể lấy dữ liệu stadium
-        }
-      }
-      
-      // Ở đây đã có dữ liệu sân
-      console.log('>> Lấy được danh sách stadiums:', processedStadiums.length);
-      
-      // Hiển thị chi tiết stadium đầu tiên để debug
-      if (processedStadiums.length > 0) {
-        console.log('>> Mẫu stadium đầu tiên:', processedStadiums[0]);
-        // Hiển thị trạng thái sân
-        console.log('>> Trạng thái sân đầu tiên:', processedStadiums[0].status);
-        // Log trạng thái của tất cả sân
-        console.log('>> Thống kê trạng thái của tất cả sân:');
-        const statusStats = {};
-        processedStadiums.forEach(stadium => {
-          const status = stadium.status || 'KHÔNG XÁC ĐỊNH';
-          statusStats[status] = (statusStats[status] || 0) + 1;
-        });
-        console.log(statusStats);
-      }
-      
-      // Cập nhật state ban đầu với dữ liệu sân
-      setStadiums(processedStadiums);
-      
-      // Lấy ảnh cho các sân
-      console.log('=====================================================');
-      console.log('>> FETCH IMAGES FOR STADIUMS');
-      console.log('=====================================================');
-      
-      const fetchImagesForStadiums = async (stadiumsList) => {
-        try {
-          console.log(`>> Bắt đầu lấy ảnh cho ${stadiumsList.length} sân bóng`);
-          const imagesMap = {};
-          
-          // Gọi API lấy tất cả ảnh
-          try {
-            console.log(`>> Gọi API lấy tất cả ảnh từ server`);
-            const response = await imageAPI.getImages();
-            
-            // In nội dung response để debug
-            console.log(`>> API images trả về:`, response.data);
-            
-            // Nếu có dữ liệu ảnh
-            if (response.data && response.data.result && Array.isArray(response.data.result)) {
-              const allImages = response.data.result;
-              console.log(`>> Lấy được ${allImages.length} ảnh từ server`);
-              
-              // In thông tin chi tiết của các ảnh để debug
-              allImages.forEach((image, index) => {
-                console.log(`>> Ảnh #${index}: stadiumId=${image.stadiumId}, imageUrl=${image.imageUrl}`);
-              });
-              
-              // Phân bổ ảnh cho các sân dựa trên stadiumId
-              for (const stadium of stadiumsList) {
-                const stadiumId = stadium.stadiumId || stadium.id;
-                if (!stadiumId) continue;
-                
-                // Tìm ảnh của sân này trong danh sách ảnh
-                const stadiumImages = allImages.filter(img => img.stadiumId === stadiumId);
-                
-                if (stadiumImages.length > 0) {
-                  // Lấy ảnh đầu tiên
-                  const imageUrl = stadiumImages[0].imageUrl;
-                  imagesMap[stadiumId] = imageUrl;
-                  console.log(`>> Đã tìm thấy ảnh cho sân ${stadiumId}: ${imageUrl}`);
-                } else {
-                  console.log(`>> Không tìm thấy ảnh nào cho sân ${stadiumId}`);
-                }
-              }
-            }
-          } catch (error) {
-            console.error(`>> Lỗi khi lấy tất cả ảnh: ${error.message}`);
-          }
-          
-          console.log(`>> Đã tìm được ảnh cho ${Object.keys(imagesMap).length}/${stadiumsList.length} sân`);
-          console.log(`>> Chi tiết ảnh đã phân bổ:`, imagesMap);
-          setStadiumImages(imagesMap);
-        } catch (error) {
-          console.error(`>> Lỗi khi lấy ảnh: ${error.message}`);
-        }
+      // Hàm helper để xử lý cấu trúc dữ liệu đa dạng từ API
+      const extractArrayData = (data) => {
+        if (Array.isArray(data)) return data;
+        if (data?.result && Array.isArray(data.result)) return data.result;
+        if (data?.data && Array.isArray(data.data)) return data.data;
+        if (data?.content && Array.isArray(data.content)) return data.content;
+        return [];
       };
       
-      // Gọi hàm lấy ảnh sau khi đã có danh sách sân
-      await fetchImagesForStadiums(processedStadiums);
-      
-      // Lấy chi tiết location cho các stadium
-      console.log('=====================================================');
-      console.log('>> FETCH LOCATIONS FOR STADIUMS');
-      console.log('=====================================================');
-      
-      // Đặt cờ để kiểm tra đã lấy thành công dữ liệu location chưa
-      let locationsFetched = false;
-      
-      // Thử lấy locations từ API chính
+      // 1. Fetch stadiums
+      let processedStadiums = [];
       try {
-        console.log('>> Thử lấy dữ liệu từ endpoint /location...');
-        const locationsResponse = await locationAPI.getLocations();
-        const locationsData = locationsResponse.data;
-        
-        let locations = [];
-        if (Array.isArray(locationsData)) {
-          locations = locationsData;
-        } else if (locationsData && Array.isArray(locationsData.result)) {
-          locations = locationsData.result;
-        } else if (locationsData && Array.isArray(locationsData.data)) {
-          locations = locationsData.data;
-        } else {
-          console.warn('>> Không tìm thấy dữ liệu locations từ API');
-          throw new Error('Cấu trúc location không đúng');
+        const response = await stadiumAPI.getStadiums();
+        processedStadiums = extractArrayData(response.data);
+      } catch (err) {
+        try {
+          // Thử endpoint thay thế
+          const alternativeResponse = await stadiumAPI.getStadiumsAlternative();
+          processedStadiums = extractArrayData(alternativeResponse.data);
+        } catch (altErr) {
+          setError(`Không thể tải dữ liệu sân bóng. Vui lòng đảm bảo backend đang chạy.`);
+          setLoading(false);
+          return;
         }
+      }
+      
+      // Cập nhật state với dữ liệu sân
+      setStadiums(processedStadiums);
+      
+      // 2. Fetch images
+      try {
+        const imagesMap = {};
+        const response = await imageAPI.getImages();
+        const allImages = extractArrayData(response.data);
         
-        console.log('>> Lấy được danh sách locations:', locations.length);
+        // Map ảnh vào sân tương ứng
+        processedStadiums.forEach(stadium => {
+          const stadiumId = stadium.stadiumId || stadium.id;
+          if (!stadiumId) return;
+          
+          const stadiumImages = allImages.filter(img => img.stadiumId === stadiumId);
+          if (stadiumImages.length > 0) {
+            imagesMap[stadiumId] = stadiumImages[0].imageUrl;
+          }
+        });
         
-        // Cập nhật thông tin location cho mỗi stadium
-        if (locations.length > 0) {
-          locationsFetched = true;
-          const enhancedStadiums = processedStadiums.map(stadium => {
-            const locationId = stadium.locationId;
-            if (!locationId) {
-              console.warn(`>> Stadium ${stadium.stadiumId || stadium.id} không có locationId`);
-              return stadium;
-            }
+        setStadiumImages(imagesMap);
+      } catch (error) {
+        // Silent fail - không gây lỗi nếu không tải được ảnh
+      }
+      
+      // 3. Fetch types
+      try {
+        const typesResponse = await typeAPI.getTypes();
+        const typesData = extractArrayData(typesResponse.data);
+        setTypes(typesData);
+      } catch (error) {
+        try {
+          // Thử endpoint thay thế cho types
+          const altTypesResponse = await typeAPI.getTypesAlternative();
+          const altTypesData = extractArrayData(altTypesResponse.data);
+          setTypes(altTypesData);
+        } catch (altError) {
+          // Không gây lỗi critical nếu không tải được types
+        }
+      }
+      
+      // 4. Fetch locations và enrich stadiums
+      try {
+        const locationsResponse = await locationAPI.getLocations();
+        const locations = extractArrayData(locationsResponse.data);
+        
+        // Enrich stadiums với location data
+        const enhancedStadiums = [...processedStadiums];
+        
+        enhancedStadiums.forEach((stadium, index) => {
+          const locationId = stadium.locationId;
+          
+          if (locationId) {
+            const locationInfo = locations.find(loc => loc.locationId === locationId);
             
-            // Tìm location tương ứng
-            const matchingLocation = locations.find(loc => 
-              loc.locationId === locationId || loc.id === locationId
-            );
-            
-            if (matchingLocation) {
-              console.log(`>> Đã tìm thấy location cho stadium: ${stadium.stadiumId || stadium.id}`);
-              return {
-                ...stadium,
-                location: matchingLocation, // Lưu toàn bộ thông tin location
-                locationName: matchingLocation.locationName || matchingLocation.name || matchingLocation.location_name,
-                district: matchingLocation.district,
-                address: matchingLocation.address,
-                city: matchingLocation.city
+            if (locationInfo) {
+              enhancedStadiums[index] = {
+                ...enhancedStadiums[index],
+                location: locationInfo,
+                address: locationInfo.address || enhancedStadiums[index].address,
+                district: locationInfo.district || enhancedStadiums[index].district,
+                city: locationInfo.city || enhancedStadiums[index].city
               };
             }
-            
-            return stadium;
-          });
-          
-          // Cập nhật state với thông tin đã bổ sung
-          setStadiums(enhancedStadiums);
-        }
-      } catch (locErr) {
-        console.warn('>> Lỗi khi lấy locations từ API chính:', locErr);
-      }
-      
-      // Nếu không lấy được từ API chính, thử API thay thế
-      if (!locationsFetched) {
-        try {
-          console.log('>> Thử lấy dữ liệu từ endpoint thay thế /locations...');
-          const locationsAltResponse = await locationAPI.getLocationsAlternative();
-          const locationsAltData = locationsAltResponse.data;
-          
-          let locations = [];
-          if (Array.isArray(locationsAltData)) {
-            locations = locationsAltData;
-          } else if (locationsAltData && Array.isArray(locationsAltData.result)) {
-            locations = locationsAltData.result;
-          } else if (locationsAltData && Array.isArray(locationsAltData.data)) {
-            locations = locationsAltData.data;
-          } else {
-            console.warn('>> Không tìm thấy dữ liệu locations từ API thay thế');
-            throw new Error('Cấu trúc location không đúng');
           }
-          
-          console.log('>> Lấy được danh sách locations từ API thay thế:', locations.length);
-          
-          // Cập nhật thông tin location cho mỗi stadium
-          if (locations.length > 0) {
-            locationsFetched = true;
-            const enhancedStadiums = processedStadiums.map(stadium => {
-              const locationId = stadium.locationId;
-              if (!locationId) return stadium;
-              
-              // Tìm location tương ứng
-              const matchingLocation = locations.find(loc => 
-                loc.locationId === locationId || loc.id === locationId
-              );
-              
-              if (matchingLocation) {
-                return {
-                
-                  ...stadium,
-                  location: matchingLocation,
-                  locationName: matchingLocation.locationName || matchingLocation.name || matchingLocation.location_name,
-                  district: matchingLocation.district,
-                  address: matchingLocation.address,
-                  city: matchingLocation.city
-                };
-              }
-              
-              return stadium;
-            });
-            
-            // Cập nhật state với thông tin đã bổ sung
-            setStadiums(enhancedStadiums);
-          }
-        } catch (locAltErr) {
-          console.warn('>> Lỗi khi lấy locations từ API thay thế:', locAltErr);
-        }
-      }
-      
-      // Nếu vẫn không lấy được, thử từ stadium_location
-      if (!locationsFetched) {
-        try {
-          console.log('>> Thử lấy dữ liệu từ endpoint /stadium_location...');
-          const stadiumLocResponse = await locationAPI.getStadiumLocations();
-          const stadiumLocData = stadiumLocResponse.data;
-          
-          let stadiumLocations = [];
-          if (Array.isArray(stadiumLocData)) {
-            stadiumLocations = stadiumLocData;
-          } else if (stadiumLocData && Array.isArray(stadiumLocData.result)) {
-            stadiumLocations = stadiumLocData.result;
-          } else if (stadiumLocData && Array.isArray(stadiumLocData.data)) {
-            stadiumLocations = stadiumLocData.data;
-          } else {
-            console.warn('>> Không tìm thấy dữ liệu stadium_location');
-            throw new Error('Cấu trúc stadium_location không đúng');
-          }
-          
-          console.log('>> Lấy được danh sách stadium_location:', stadiumLocations.length);
-          
-          // Cập nhật thông tin location từ stadium_location
-          if (stadiumLocations.length > 0) {
-            locationsFetched = true;
-            const enhancedStadiums = processedStadiums.map(stadium => {
-              // Tìm stadium_location theo stadiumId
-              const stadiumId = stadium.stadiumId || stadium.id;
-              const matchingStadiumLoc = stadiumLocations.find(sl => 
-                sl.stadiumId === stadiumId || sl.stadium?.id === stadiumId
-              );
-              
-              if (matchingStadiumLoc) {
-                // Nếu stadium_location có location object, sử dụng nó
-                if (matchingStadiumLoc.location) {
-                  const locationData = matchingStadiumLoc.location;
-                  return {
-                    ...stadium,
-                    location: locationData,
-                    locationName: locationData.locationName || locationData.name || locationData.location_name,
-                    district: locationData.district,
-                    address: locationData.address,
-                    city: locationData.city
-                  };
-                }
-                
-                // Hoặc nếu stadium_location có thông tin location trực tiếp
-                return {
-                  ...stadium,
-                  location: matchingStadiumLoc,
-                  locationName: matchingStadiumLoc.locationName || matchingStadiumLoc.name || matchingStadiumLoc.location_name,
-                  district: matchingStadiumLoc.district,
-                  address: matchingStadiumLoc.address,
-                  city: matchingStadiumLoc.city
-                };
-              }
-              
-              return stadium;
-            });
-            
-            // Cập nhật state với thông tin đã bổ sung
-            setStadiums(enhancedStadiums);
-          }
-        } catch (slErr) {
-          console.warn('>> Lỗi khi lấy dữ liệu stadium_location:', slErr);
-        }
-      }
-      
-      // Nếu vẫn không lấy được dữ liệu từ bất kỳ endpoint nào, 
-      // lấy từng location cho mỗi stadium
-      if (!locationsFetched) {
-        try {
-          console.log('>> Thử lấy location cho từng stadium một...');
-          const enhancedStadiums = [...processedStadiums];
-          let locationUpdated = false;
-          
-          for (const stadium of enhancedStadiums) {
-            const locationId = stadium.locationId;
-            if (!locationId) continue;
-            
-            try {
-              console.log(`>> Lấy thông tin location cho stadium: ${stadium.stadiumId || stadium.id}, locationId: ${locationId}`);
-              const locationResponse = await locationAPI.getLocationById(locationId);
-              const locationData = locationResponse.data;
-              
-              if (locationData) {
-                // Tìm stadium trong array và cập nhật
-                const index = enhancedStadiums.findIndex(s => 
-                  (s.stadiumId && s.stadiumId === stadium.stadiumId) || 
-                  (s.id && s.id === stadium.id)
-                );
-                
-                if (index !== -1) {
-                  console.log(`>> Đã tìm thấy và cập nhật location cho stadium: ${stadium.stadiumId || stadium.id}`);
-                  enhancedStadiums[index] = {
-                    ...enhancedStadiums[index],
-                    location: locationData,
-                    locationName: locationData.locationName || locationData.name || locationData.location_name,
-                    district: locationData.district,
-                    address: locationData.address,
-                    city: locationData.city
-                  };
-                  locationUpdated = true;
-                }
-              }
-            } catch (singleLocErr) {
-              console.error(`>> Lỗi khi lấy location cho stadium ${stadium.stadiumId || stadium.id}:`, singleLocErr);
-              
-              // Thử endpoint thay thế
-              try {
-                console.log(`>> Thử endpoint thay thế cho location ID ${locationId}`);
-                const altResponse = await locationAPI.getLocationByIdAlternative(locationId);
-                const altLocationData = altResponse.data;
-                
-                if (altLocationData) {
-                  // Tìm stadium trong array và cập nhật
-                  const index = enhancedStadiums.findIndex(s => 
-                    (s.stadiumId && s.stadiumId === stadium.stadiumId) || 
-                    (s.id && s.id === stadium.id)
-                  );
-                  
-                  if (index !== -1) {
-                    console.log(`>> Đã tìm thấy và cập nhật location (từ API thay thế) cho stadium: ${stadium.stadiumId || stadium.id}`);
-                    enhancedStadiums[index] = {
-                      ...enhancedStadiums[index],
-                      location: altLocationData,
-                      locationName: altLocationData.locationName || altLocationData.name || altLocationData.location_name,
-                      district: altLocationData.district,
-                      address: altLocationData.address,
-                      city: altLocationData.city
-                    };
-                    locationUpdated = true;
-                  }
-                }
-              } catch (altErr) {
-                console.error(`>> Cả API chính và thay thế đều không lấy được location cho stadium ${stadium.stadiumId || stadium.id}`);
-              }
-            }
-          }
-          
-          // Cập nhật stadiums nếu có thay đổi
-          if (locationUpdated) {
-            console.log('>> Đã cập nhật locations cho một số stadium, cập nhật state');
-            setStadiums([...enhancedStadiums]);
-          }
-        } catch (batchLocErr) {
-          console.error('>> Lỗi khi xử lý locations cho từng stadium:', batchLocErr);
-        }
-      }
-      
-      // Fetch types
-      console.log('=====================================================');
-      console.log('>> FETCH TYPES START');
-      console.log('=====================================================');
-      
-      try {
-        // Sử dụng API service
-        const response = await typeAPI.getTypes();
-        const typeData = response.data;
+        });
         
-        console.log('>> Type API Response:', typeData);
-        
-        let processedTypes = [];
-        
-        if (Array.isArray(typeData)) {
-          processedTypes = typeData;
-        } else if (typeData && Array.isArray(typeData.result)) {
-          processedTypes = typeData.result;
-        } else if (typeData && Array.isArray(typeData.data)) {
-          processedTypes = typeData.data;
-        } else {
-          console.warn('>> Không tìm thấy dữ liệu types trong cấu trúc response');
-          
-          // Thử endpoint thay thế
-          try {
-            const altResponse = await typeAPI.getTypesAlternative();
-            const altData = altResponse.data;
-            
-            if (Array.isArray(altData)) {
-              processedTypes = altData;
-            } else if (altData && Array.isArray(altData.result)) {
-              processedTypes = altData.result;
-            } else if (altData && Array.isArray(altData.data)) {
-              processedTypes = altData.data;
-            } else {
-              throw new Error('Không tìm thấy dữ liệu type từ endpoint thay thế');
-            }
-          } catch (altErr) {
-            console.error('>> LỖI KHI THỬ ENDPOINT TYPE THAY THẾ:', altErr);
-          }
-        }
-        
-        // Đảm bảo mỗi loại sân có typeId
-        processedTypes = processedTypes.map(type => ({
-          ...type,
-          typeId: type.typeId || type.id // Hỗ trợ cả hai trường hợp 
-        }));
-        
-        console.log('>> Dữ liệu loại sân đã xử lý:', processedTypes);
-        setTypes(processedTypes);
-      } catch (err) {
-        console.error('>> LỖI KHI GỌI API TYPES:', err);
-        setError(prevError => prevError || `Không thể tải loại sân. Lỗi: ${err.message}`);
+        setStadiums(enhancedStadiums);
+      } catch (error) {
+        // Silent fail - vẫn hiển thị stadium nếu không lấy được location
       }
-      
-      setLoading(false);
-    } catch (err) {
-      console.error('Lỗi tổng quát khi tải dữ liệu:', err);
-      setError(`Không thể tải dữ liệu. Lỗi: ${err.message}. Vui lòng đảm bảo backend đang chạy.`);
+    } catch (error) {
+      setError('Đã xảy ra lỗi khi tải dữ liệu. Vui lòng thử lại sau.');
+    } finally {
       setLoading(false);
     }
   };
@@ -584,41 +217,59 @@ const StadiumListPage = () => {
   
   // Lấy tên sân - từ API field là "stadiumName"
   const getStadiumName = (stadium) => {
+    if (!stadium) return "Sân bóng";
+    
     return stadium.stadiumName || stadium.name || "Sân bóng";
   };
   
-  // Lấy thông tin địa điểm từ locationId hoặc location object
-  const getLocationName = (stadium) => {
-    if (!stadium) return '';
-    return stadium.locationName || 'Chưa có thông tin';
-  };
-  
-  const getDistrict = (stadium) => {
-    if (!stadium) return '';
-    return stadium.district || 'Chưa có thông tin';
-  };
-
-  const getLocationAddress = (stadium) => {
-    if (!stadium) return '';
-    const address = stadium.address || '';
-    const district = stadium.district || '';
-    const city = stadium.city || '';
-    
-    return [address, district, city]
-      .filter(part => part && part.trim() !== '')
-      .join(', ');
-  };
-  
+  // Lấy thành phố riêng
   const getCity = (stadium) => {
-    // Trường hợp thuộc tính đã được trích xuất trực tiếp
-    if (stadium.city) return stadium.city;
+    if (!stadium) return "Chưa cập nhật thành phố";
     
     // Nếu có location object
     if (stadium.location && typeof stadium.location === 'object') {
       if (stadium.location.city) return stadium.location.city;
     }
     
-    return "Chưa cập nhật thành phố";
+    // Trường hợp thuộc tính đã được trích xuất trực tiếp
+    return stadium.city || "Chưa cập nhật thành phố";
+  };
+
+  // Lấy quận/huyện riêng
+  const getDistrict = (stadium) => {
+    if (!stadium) return 'Chưa có thông tin';
+    
+    if (stadium.location && stadium.location.district) {
+      return stadium.location.district;
+    }
+    
+    return stadium.district || 'Chưa có thông tin';
+  };
+
+  // Lấy địa chỉ chi tiết (không bao gồm district và city)
+  const getAddress = (stadium) => {
+    if (!stadium) return 'Chưa có thông tin';
+    
+    // Nếu có location object
+    if (stadium.location && typeof stadium.location === 'object') {
+      return stadium.location.address || 'Chưa có thông tin';
+    }
+    
+    // Trường hợp dữ liệu trực tiếp
+    return stadium.address || 'Chưa có thông tin';
+  };
+
+  // Lấy địa chỉ đầy đủ (chỉ hiển thị trong chi tiết)
+  const getFullAddress = (stadium) => {
+    if (!stadium) return 'Chưa có thông tin';
+    
+    const address = getAddress(stadium);
+    const district = getDistrict(stadium);
+    const city = getCity(stadium);
+    
+    return [address, district, city]
+      .filter(part => part && part.trim() !== '' && part !== 'Chưa có thông tin' && part !== 'Chưa cập nhật thành phố')
+      .join(', ') || 'Chưa có thông tin';
   };
   
   // Lấy giá sân từ API
@@ -637,7 +288,19 @@ const StadiumListPage = () => {
     const stadiumId = stadium.stadiumId || stadium.id;
     if (!stadiumId) return '/stadium-placeholder.jpg';
     
+    // Nếu stadium có thuộc tính imageUrl trực tiếp
+    if (stadium.imageUrl) {
+      // Kiểm tra xem imageUrl có phải là đường dẫn đầy đủ không
+      if (stadium.imageUrl.startsWith('http')) {
+        return stadium.imageUrl;
+      }
+      
+      // Nếu là đường dẫn tương đối, thêm base URL
+      return `${process.env.REACT_APP_BACKEND_URL || 'http://localhost:8080'}${stadium.imageUrl}`;
+    }
+    
     const imageUrl = stadiumImages[stadiumId];
+    
     if (!imageUrl) return '/stadium-placeholder.jpg';
     
     // Kiểm tra xem imageUrl có phải là đường dẫn đầy đủ không
@@ -764,11 +427,18 @@ const StadiumListPage = () => {
 
   // Render một stadium card với thông tin đầy đủ
   const renderStadiumCard = (stadium) => {
-    console.log(`---------------------------------------------`);
-    console.log(`>> Render stadium card cho sân ${stadium.stadiumId || stadium.id}`);
-    console.log(`---------------------------------------------`);
-
     const imageUrl = getStadiumImage(stadium);
+    const status = getStadiumStatus(stadium);
+    const price = getStadiumPrice(stadium);
+    const city = getCity(stadium);
+    const district = getDistrict(stadium);
+    const address = getAddress(stadium);
+    const stadiumName = getStadiumName(stadium);
+    
+    // Tạo địa chỉ chi tiết (address + district)
+    const addressDetail = [address, district]
+      .filter(part => part && part.trim() !== '' && part !== 'Chưa có thông tin')
+      .join(', ') || 'Chưa có thông tin';
     
     return (
       <div className="stadium-card" key={stadium.stadiumId || stadium.id}>
@@ -776,10 +446,8 @@ const StadiumListPage = () => {
           {imageUrl ? (
             <img
               src={imageUrl}
-              alt={stadium.stadiumName || stadium.name}
+              alt={stadiumName}
               onError={(e) => {
-                // Xử lý lỗi khi tải hình ảnh
-                console.log(`>> Lỗi khi tải hình ảnh cho sân ${stadium.stadiumId || stadium.id}`);
                 e.target.onerror = null; // Tránh vòng lặp vô hạn
                 e.target.parentNode.classList.add('no-image');
                 e.target.style.display = 'none';
@@ -791,28 +459,31 @@ const StadiumListPage = () => {
         </div>
         
         <div className="stadium-info">
-          <h3>{stadium.stadiumName || stadium.name}</h3>
+          {/* 1. Tên sân */}
+          <h3>{stadiumName}</h3>
           
           <div className="location-info">
+            {/* 2. Thành phố */}
             <p className="location-name">
               <FontAwesomeIcon icon={faMapMarkerAlt} className="location-icon" />
-              <strong>{getLocationName(stadium)}</strong>
+              <strong>{city}</strong>
             </p>
             
+            {/* 3. Địa chỉ + Quận/huyện */}
             <p className="address">
               <FontAwesomeIcon icon={faLocationArrow} className="address-icon" />
-              <span>{getLocationAddress(stadium)} ({getDistrict(stadium)})</span>
+              <span>{addressDetail}</span>
             </p>
           </div>
           
           <div className="price-status">
             <span className="price">
               <FontAwesomeIcon icon={faMoneyBillWave} className="price-icon" />
-              {getStadiumPrice(stadium)}
+              {price}
             </span>
             
-            <span className={`status ${getStadiumStatus(stadium).className}`}>
-              {getStadiumStatus(stadium).text}
+            <span className={`status ${status.className}`}>
+              {status.text}
             </span>
           </div>
           

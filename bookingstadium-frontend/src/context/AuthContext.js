@@ -8,54 +8,150 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [forbiddenError, setForbiddenError] = useState(null);
+  const [isAdminRole, setIsAdminRole] = useState(false);
+  const [isUserRole, setIsUserRole] = useState(false);
+  const [isOwnerRole, setIsOwnerRole] = useState(false);
 
-  // Kiểm tra xem người dùng đã đăng nhập chưa (khi refresh trang)
-  const checkAuthStatus = useCallback(async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('accessToken');
+  // Lắng nghe sự kiện lỗi 403 (forbidden) từ apiService
+  useEffect(() => {
+    const handleForbidden = (event) => {
+      console.log('Lỗi phân quyền:', event.detail);
+      setForbiddenError({
+        message: event.detail.message,
+        url: event.detail.url,
+        method: event.detail.method,
+        timestamp: new Date()
+      });
       
-      if (!token) {
+      // Tự động xóa thông báo lỗi sau 5 giây
+      setTimeout(() => {
+        setForbiddenError(null);
+      }, 5000);
+    };
+    
+    window.addEventListener('api:forbidden', handleForbidden);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('api:forbidden', handleForbidden);
+    };
+  }, []);
+
+  // Hàm phân tích JWT token để lấy thông tin
+  const parseJwt = (token) => {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map(function (c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          })
+          .join('')
+      );
+      return JSON.parse(jsonPayload);
+    } catch (error) {
+      console.error('Lỗi khi phân tích token:', error);
+      return null;
+    }
+  };
+
+  // Lấy user_id từ token (Spring Security không cung cấp user_id trong token)
+  const getUserIdFromToken = (token) => {
+    // Trong Spring Security chuẩn, token JWT không chứa user_id
+    // Chúng ta sẽ cần lấy thông tin này từ API hoặc từ sessionStorage
+    try {
+      // Kiểm tra cache trước
+      const cachedUser = sessionStorage.getItem('currentUser');
+      if (cachedUser) {
+        const user = JSON.parse(cachedUser);
+        if (user && (user.id || user.user_id)) {
+          return user.id || user.user_id;
+        }
+      }
+      
+      // Nếu không có trong cache, trả về null
+      return null;
+    } catch (error) {
+      console.error('Lỗi khi trích xuất user_id từ cache:', error);
+      return null;
+    }
+  };
+  
+  // Lấy email từ token
+  const getEmailFromToken = (token) => {
+    try {
+      const decoded = parseJwt(token);
+      // Email có thể được lưu trong các trường khác nhau tùy thuộc vào cấu hình JWT
+      if (decoded) {
+        return decoded.sub || decoded.email || decoded.username || null;
+      }
+      return null;
+    } catch (error) {
+      console.error('Lỗi khi trích xuất email từ token:', error);
+      return null;
+    }
+  };
+  
+  // Lấy role từ token
+  const getRoleFromToken = (token) => {
+    try {
+      const decoded = parseJwt(token);
+      // Role trong Spring Security thường được lưu trong scope
+      if (decoded && decoded.scope) {
+        const scopes = decoded.scope.split(' ');
+        // Tìm role trong các scope
+        for (const scope of scopes) {
+          if (scope === 'ADMIN' || scope === 'USER' || scope === 'OWNER') {
+            return scope;
+          }
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('Lỗi khi trích xuất role từ token:', error);
+      return null;
+    }
+  };
+
+  // Nếu đã có token, tự động đăng nhập khi khởi động
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        setLoading(true);
+        
+        // Nếu không có accessToken, không cần kiểm tra
+        const accessToken = localStorage.getItem('accessToken');
+        if (!accessToken) {
         setIsAuthenticated(false);
         setCurrentUser(null);
         setLoading(false);
         return;
       }
       
-      // Kiểm tra token có hợp lệ không
-      try {
-        const introspectResponse = await authAPI.introspect({ token });
+        // Phân tích JWT token
+        const userId = getUserIdFromToken(accessToken); // có thể null
+        const email = getEmailFromToken(accessToken);
+        const role = getRoleFromToken(accessToken);
         
-        if (introspectResponse.data && introspectResponse.data.result && introspectResponse.data.result.valid) {
-          // Token hợp lệ, lấy thông tin user
+        if (email) {
+          // Cập nhật thông tin người dùng từ token
+          setCurrentUser({
+            email: email,
+            user_id: userId, // có thể null
+            role: role,
+            firstName: '', // Sẽ được cập nhật khi gọi API chi tiết
+            lastName: ''
+          });
+          
           setIsAuthenticated(true);
           
-          // Lấy email từ token để hiển thị thông tin cơ bản
-          const email = getEmailFromToken(token);
-          if (email) {
-            // Tạo một đối tượng user cơ bản từ thông tin trong token
-            const basicUserInfo = {
-              email: email,
-              role: { roleName: getRoleFromToken(token) }
-            };
-            
-            setCurrentUser(basicUserInfo);
-            
-            // Lấy thông tin chi tiết của user từ API
-            try {
-              const userId = getUserIdFromToken(token);
-              if (userId) {
-                const userResponse = await userAPI.getUserById(userId);
-                if (userResponse.data && userResponse.data.result) {
-                  // Cập nhật thông tin người dùng đầy đủ
-                  setCurrentUser(userResponse.data.result);
-                }
-              }
-            } catch (userError) {
-              console.error("Lỗi khi lấy thông tin chi tiết người dùng:", userError);
-              // Vẫn sử dụng thông tin cơ bản nếu không lấy được chi tiết
-            }
-          }
+          // Cập nhật trạng thái role
+          setIsUserRole(role === 'USER');
+          setIsOwnerRole(role === 'OWNER');
+          setIsAdminRole(role === 'ADMIN');
         } else {
           // Token không hợp lệ
           localStorage.removeItem('accessToken');
@@ -63,58 +159,78 @@ export const AuthProvider = ({ children }) => {
           setCurrentUser(null);
         }
       } catch (error) {
-        console.error("Lỗi kiểm tra token:", error);
+        console.error('Error checking authentication:', error);
+        setIsAuthenticated(false);
+        setCurrentUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    checkAuth();
+  }, []);
+
+  // Hàm kiểm tra xác thực - được gọi từ bên ngoài khi cần
+  const checkAuthStatus = useCallback(async () => {
+    try {
+      // Kiểm tra token hiện tại
+      const accessToken = localStorage.getItem('accessToken');
+      if (!accessToken) {
+        setIsAuthenticated(false);
+        setCurrentUser(null);
+        return false;
+      }
+      
+      // Phân tích JWT token
+      const userId = getUserIdFromToken(accessToken);
+      const email = getEmailFromToken(accessToken);
+      const role = getRoleFromToken(accessToken);
+      
+      if (email && userId) {
+        // Token có vẻ hợp lệ, cập nhật thông tin
+        // Sửa: Chỉ cập nhật nếu thông tin thay đổi để tránh vòng lặp
+        setCurrentUser(prevUser => {
+          // Nếu đã có thông tin giống nhau, không cập nhật
+          if (prevUser && 
+              prevUser.email === email && 
+              prevUser.user_id === userId &&
+              prevUser.role === role) {
+            return prevUser;
+          }
+          
+          // Nếu thông tin khác, cập nhật
+          return {
+            email: email,
+            user_id: userId,
+            role: role,
+            firstName: prevUser?.firstName || '',
+            lastName: prevUser?.lastName || ''
+          };
+        });
+        
+        setIsAuthenticated(true);
+        
+        // Cập nhật trạng thái role
+        setIsUserRole(role === 'USER');
+        setIsOwnerRole(role === 'OWNER');
+        setIsAdminRole(role === 'ADMIN');
+        
+        return true;
+      } else {
+        // Token không hợp lệ
         localStorage.removeItem('accessToken');
         setIsAuthenticated(false);
         setCurrentUser(null);
+        return false;
       }
     } catch (error) {
-      console.error("Lỗi kiểm tra trạng thái xác thực:", error);
+      console.error('Lỗi khi kiểm tra xác thực:', error);
       localStorage.removeItem('accessToken');
       setIsAuthenticated(false);
       setCurrentUser(null);
-    } finally {
-      setLoading(false);
+      return false;
     }
-  }, []);
-
-  // Hàm lấy email từ JWT token
-  const getEmailFromToken = (token) => {
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.sub || '';
-    } catch (error) {
-      console.error("Lỗi phân tích token:", error);
-      return '';
-    }
-  };
-  
-  // Hàm lấy userId từ JWT token (nếu có)
-  const getUserIdFromToken = (token) => {
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.userId || '';
-    } catch (error) {
-      console.error("Lỗi phân tích token:", error);
-      return '';
-    }
-  };
-  
-  // Hàm lấy role từ JWT token
-  const getRoleFromToken = (token) => {
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.scope || 'USER';
-    } catch (error) {
-      console.error("Lỗi phân tích token:", error);
-      return 'USER';
-    }
-  };
-
-  // Kiểm tra xác thực khi component mount
-  useEffect(() => {
-    checkAuthStatus();
-  }, [checkAuthStatus]);
+  }, []); // Xóa dependency currentUser để tránh vòng lặp
 
   // Hàm đăng nhập
   const login = async (email, password) => {
@@ -123,6 +239,9 @@ export const AuthProvider = ({ children }) => {
       setError(null);
       
       const response = await authAPI.login({ email, password });
+      
+      // Debug để xem cấu trúc response từ backend
+      console.log('Login response:', response);
       
       if (response.data && response.data.result && response.data.result.token) {
         // Lưu token vào localStorage
@@ -159,6 +278,8 @@ export const AuthProvider = ({ children }) => {
           errorMessage = 'Email hoặc mật khẩu không chính xác';
         } else if (error.response.status === 404) {
           errorMessage = 'Không tìm thấy tài khoản với email này';
+        } else if (error.response.status === 403) {
+          errorMessage = 'Tài khoản của bạn không có quyền truy cập';
         }
       } else if (error.request) {
         errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.';
@@ -177,7 +298,16 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const response = await authAPI.register(userData);
+      // Đảm bảo vai trò là USER
+      const userDataWithRole = {
+        ...userData,
+        role: 'USER' // Mặc định là USER cho ứng dụng web
+      };
+      
+      const response = await authAPI.register(userDataWithRole);
+      
+      // Debug để xem cấu trúc response từ backend
+      console.log('Register response:', response);
       
       if (response.data && response.data.result) {
         return { success: true, data: response.data };
@@ -232,8 +362,12 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       let errorMessage = 'Cập nhật thông tin thất bại. Vui lòng thử lại.';
       
-      if (error.response && error.response.data && error.response.data.message) {
+      if (error.response) {
+        if (error.response.data && error.response.data.message) {
         errorMessage = error.response.data.message;
+        } else if (error.response.status === 403) {
+          errorMessage = 'Bạn không có quyền cập nhật thông tin này';
+        }
       }
       
       setError(errorMessage);
@@ -243,17 +377,52 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Hàm kiểm tra có phải là user không (phục vụ phân quyền đơn giản)
+  const isUser = () => {
+    if (!currentUser || !currentUser.role) return false;
+    
+    // Xử lý nhiều dạng role khác nhau
+    if (typeof currentUser.role === 'string') {
+      return currentUser.role === 'USER';
+    } else if (currentUser.role.roleName) {
+      return currentUser.role.roleName === 'USER';
+    } else if (currentUser.role.roleId) {
+      return currentUser.role.roleId === 'USER';
+    }
+    
+    return false;
+  };
+
+  // Hàm cập nhật thông tin user_id trong context
+  const setUserInfo = useCallback((userId) => {
+    setCurrentUser(prev => {
+      if (prev && prev.user_id === userId) {
+        return prev; // Không thay đổi nếu giống nhau
+      }
+      return {
+        ...prev,
+        user_id: userId
+      };
+    });
+  }, []);
+
   // Các giá trị và function được cung cấp bởi context
   const value = {
     currentUser,
     loading,
     error,
+    forbiddenError,
     isAuthenticated,
+    isUser,
+    isUserRole,
+    isOwnerRole,
+    isAdminRole,
     login,
     register,
     logout,
     checkAuthStatus,
-    updateUserInfo
+    updateUserInfo,
+    setUserInfo
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

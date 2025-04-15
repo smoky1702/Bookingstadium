@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import AuthContext from '../../context/AuthContext';
-import { billAPI, paymentMethodAPI } from '../../services/apiService';
+import { billAPI, paymentMethodAPI, bookingAPI } from '../../services/apiService';
 import '../BillPage/BillPage.css';
 
 const BillPage = () => {
@@ -109,6 +109,11 @@ const BillPage = () => {
       });
       
       if (response.data && response.data.result) {
+        // Cập nhật trạng thái booking thành CONFIRMED
+        await bookingAPI.updateBooking(selectedBill.stadiumBookingId, {
+          status: 'CONFIRMED'
+        });
+        
         // Cập nhật danh sách hóa đơn
         setBills(bills.map(bill => 
           bill.billId === selectedBill.billId 

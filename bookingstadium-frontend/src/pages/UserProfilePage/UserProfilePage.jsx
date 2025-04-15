@@ -3,23 +3,24 @@ import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import AuthContext from '../../context/AuthContext';
-import AdminPanel from '../../Admin/AdminPanel';
 import { userAPI, bookingAPI } from '../../services/apiService';
 import '../UserProfilePage/UserProfilePage.css';
 
 const UserProfilePage = () => {
-  const { currentUser, isAuthenticated, logout } = useContext(AuthContext);
+  const { currentUser, isAuthenticated, logout, setUserInfo } = useContext(AuthContext);
   const navigate = useNavigate();
   
   const [activeTab, setActiveTab] = useState('profile');
   const [userData, setUserData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [apiLoaded, setApiLoaded] = useState(false);
+  const [forbiddenError, setForbiddenError] = useState(null);
   
   // Form state for profile editing
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({
+    email: '',
     firstname: '',
     lastname: '',
     phone: '',
@@ -33,52 +34,101 @@ const UserProfilePage = () => {
   // Booking history state
   const [bookingHistory, setBookingHistory] = useState([]);
   
-  // Kiểm tra xem người dùng có phải là admin hay không
-  const checkIsAdmin = (user) => {
-    if (!user || !user.role) return false;
-    
-    // Xử lý nhiều dạng role khác nhau
-    if (typeof user.role === 'string') {
-      return user.role === 'ADMIN';
-    } else if (user.role.roleName) {
-      return user.role.roleName === 'ADMIN';
-    } else if (user.role.roleId) {
-      return user.role.roleId === 'ADMIN';
-    }
-    
-    return false;
-  };
-
-  // Kiểm tra xem người dùng có phải là admin hay không
-  const isAdmin = checkIsAdmin(currentUser);
+  // API đang lấy từ backend thông tin các trạng thái đặt sân
+  const [bookingStatuses, setBookingStatuses] = useState({});
   
-  // Hàm xử lý định dạng ngày tháng
+  // Lấy cấu hình trạng thái đặt sân từ API
+  useEffect(() => {
+    const getBookingStatuses = async () => {
+      try {
+        // Xác định trạng thái từ backend
+        setBookingStatuses({
+          PENDING: 'Đang chờ',
+          CONFIRMED: 'Đã xác nhận',
+          COMPLETED: 'Hoàn thành', 
+          CANCELLED: 'Đã hủy'
+        });
+      } catch (error) {
+        //console.error('Lỗi khi lấy cấu hình trạng thái đặt sân:', error);
+      }
+    };
+    
+    getBookingStatuses();
+  }, []);
+  
+  // Helper functions
   const formatDate = (dateString) => {
-    if (!dateString) return 'Chưa cập nhật';
+    if (!dateString) return '';
     
     try {
       const date = new Date(dateString);
-      return new Intl.DateTimeFormat('vi-VN', {
+      if (isNaN(date.getTime())) return ''; // Trả về chuỗi rỗng nếu không hợp lệ
+      
+      return date.toLocaleDateString('vi-VN', {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit'
-      }).format(date);
+      });
     } catch (error) {
-      console.error('Error formatting date:', error);
-      return dateString; // Trả về chuỗi gốc nếu không parse được
+      //console.error('Lỗi khi định dạng ngày:', error);
+      return '';
     }
   };
+  
+  const formatDateTime = (dateTimeString) => {
+    if (!dateTimeString) return '';
+    
+    try {
+      const date = new Date(dateTimeString);
+      if (isNaN(date.getTime())) return ''; // Trả về chuỗi rỗng nếu không hợp lệ
+      
+      return date.toLocaleDateString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      //console.error('Lỗi khi định dạng ngày giờ:', error);
+      return '';
+    }
+  };
+  
+  // Lắng nghe sự kiện lỗi 403 từ api:forbidden
+  useEffect(() => {
+    const handleForbidden = (event) => {
+      //console.log('Lỗi phân quyền trong UserProfilePage:', event.detail);
+      setForbiddenError({
+        message: event.detail.message,
+        url: event.detail.url,
+        method: event.detail.method
+      });
+      
+      // Tự động xóa thông báo lỗi sau 5 giây
+      setTimeout(() => {
+        setForbiddenError(null);
+      }, 5000);
+    };
+    
+    window.addEventListener('api:forbidden', handleForbidden);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('api:forbidden', handleForbidden);
+    };
+  }, []);
   
   // Sử dụng ngay thông tin từ token cho hiển thị ban đầu
   useEffect(() => {
     if (currentUser) {
-      console.log('Thông tin người dùng từ token:', currentUser);
-      setUserData(currentUser);
+      // Khởi tạo form data rỗng, chỉ cập nhật khi có dữ liệu từ API
       setFormData({
-        firstname: currentUser.firstname || '',
-        lastname: currentUser.lastname || '',
-        phone: currentUser.phone || '',
-        day_of_birth: currentUser.day_of_birth || '',
+        email: '',
+        firstname: '',
+        lastname: '',
+        phone: '',
+        day_of_birth: '',
         password: '',
         confirmPassword: ''
       });
@@ -94,142 +144,189 @@ const UserProfilePage = () => {
     }
     
     // Fetch full user details from API
-    const fetchUserDetails = async () => {
+    const fetchUserData = async () => {
+      setLoading(true);
+      setError(null);
+      
       try {
-        setLoading(true);
-        console.log('Gọi API lấy thông tin người dùng hiện tại (email:', currentUser?.email, ')');
-          
         // Kiểm tra token trước khi gọi API
-        const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-        console.log('Token hiện tại:', token ? 'Có token (độ dài: ' + token.length + ' ký tự)' : 'Không có token');
+        const token = localStorage.getItem('accessToken');
         
-        const response = await userAPI.getCurrentUser();
-        
-        // Debug: Log API response đầy đủ
-        console.log('API Response đầy đủ:', response);
-        
-        if (response && response.data) {
-          let userData = null;
+        if (!token) {
+          throw new Error('Không tìm thấy token đăng nhập');
+        }
+
+        // Sử dụng API /users/me để lấy thông tin người dùng
+        try {
+          const response = await userAPI.getCurrentUserMe();
           
-          // Kiểm tra cấu trúc response và tìm đúng user
-          if (response.data.result && Array.isArray(response.data.result) && response.data.result.length > 0) {
-            console.log('API trả về array users, tìm kiếm user với email:', currentUser?.email);
+          if (response && response.data) {
+            let userData;
             
-            // Tìm người dùng có email khớp với email đang đăng nhập
-            const foundUser = response.data.result.find(
-              user => user.email === currentUser?.email
-            );
-            
-            if (foundUser) {
-              console.log('Tìm thấy user khớp với email đang đăng nhập');
-              userData = foundUser;
+            // Xử lý cấu trúc phản hồi
+            if (response.data.result) {
+              userData = response.data.result;
             } else {
-              console.warn('Không tìm thấy user với email khớp với email đang đăng nhập');
-              // Nếu không tìm thấy, kiểm tra có thể có user_id khớp
-              const foundUserById = response.data.result.find(
-                user => user.user_id === currentUser?.user_id
-              );
-              
-              if (foundUserById) {
-                console.log('Tìm thấy user khớp với ID đang đăng nhập');
-                userData = foundUserById;
-              } else {
-                console.warn('Không tìm thấy user phù hợp, sử dụng thông tin từ token');
-                // Nếu không tìm thấy, sử dụng thông tin từ token
-                return;
-              }
+              userData = response.data;
             }
-          } else if (response.data.result) {
-            console.log('API trả về object result');
-            userData = response.data.result;
+            
+            // Cập nhật state và form
+            setUserData(userData);
+            setApiLoaded(true);
+            
+            // Lưu thông tin vào sessionStorage để dùng cho lần sau
+            try {
+              sessionStorage.setItem('currentUser', JSON.stringify(userData));
+            } catch (e) {
+              //console.error('Lỗi khi lưu user cache:', e);
+            }
+            
+            // Cập nhật form data
+            setFormData({
+              email: userData.email || '',
+              firstname: userData.firstname || '',
+              lastname: userData.lastname || '',
+              phone: userData.phone || '',
+              day_of_birth: userData.day_of_birth || '',
+              password: '',
+              confirmPassword: ''
+            });
+            
+            // Nếu lấy được ID người dùng từ API, lưu vào context
+            if (userData.user_id) {
+              setUserInfo(userData.user_id);
+            }
           } else {
-            console.log('API trả về object trực tiếp');
-            userData = response.data;
+            throw new Error('Phản hồi API không hợp lệ');
           }
+        } catch (error) {
+          //console.error('Lỗi khi gọi API /users/me:', error);
           
-          console.log('User data extracted:', userData);
-          
-          // Nếu userData không có thông tin cần thiết, có thể đã có lỗi trong cấu trúc dữ liệu
-          if (!userData.email) {
-            console.warn('API đã trả về dữ liệu nhưng không chứa thông tin người dùng cần thiết:', userData);
-            setError('Dữ liệu API không chứa thông tin người dùng cần thiết.');
-            return;
-          }
-          
-          // Merge API data với current user data
-          const fullUserData = { 
-            ...currentUser, 
-            ...userData,
-            // Ensure we preserve role information correctly
-            role: userData.role || currentUser.role
-          };
-          
-          console.log('Full User Data (merged):', fullUserData);
-          setUserData(fullUserData);
+          // Nếu API /users/me thất bại, thử dùng getCurrentUser
+          if (error.response && error.response.status === 404) {
+            try {
+              const response = await userAPI.getCurrentUser();
+              
+              if (response && response.data) {
+                let userData;
+                
+                // Xử lý cấu trúc phản hồi
+                if (response.data.result) {
+                  userData = response.data.result;
+                } else {
+                  userData = response.data;
+                }
+                
+                // Cập nhật state và form
+                setUserData(userData);
           setApiLoaded(true);
           
-          // Update form data with complete user details
+                // Lưu thông tin vào sessionStorage
+                try {
+                  sessionStorage.setItem('currentUser', JSON.stringify(userData));
+                } catch (e) {
+                 // console.error('Lỗi khi lưu user cache:', e);
+                }
+                
+                // Cập nhật form data
           setFormData({
-            firstname: fullUserData.firstname || '',
-            lastname: fullUserData.lastname || '',
-            phone: fullUserData.phone || '',
-            day_of_birth: fullUserData.day_of_birth || '',
+                  email: userData.email || '',
+                  firstname: userData.firstname || '',
+                  lastname: userData.lastname || '',
+                  phone: userData.phone || '',
+                  day_of_birth: userData.day_of_birth || '',
             password: '',
             confirmPassword: ''
           });
+                
+                if (userData.user_id) {
+                  setUserInfo(userData.user_id);
+                }
+              } else {
+                throw new Error('Phản hồi API không hợp lệ');
+              }
+            } catch (backupError) {
+              // Sử dụng fallback từ context nếu cả 2 API đều thất bại
+              handleApiFailure(backupError);
+            }
         } else {
-          console.warn('API response không chứa data:', response);
-          setError('Không nhận được dữ liệu từ API.');
+            // Sử dụng fallback từ context nếu API thất bại
+            handleApiFailure(error);
+          }
         }
       } catch (error) {
-        console.error('Error fetching user details:', error);
-        if (error.response) {
-          console.error('Error response:', error.response.status, error.response.data);
-          setError(`Lỗi API: ${error.response.status} - ${error.response.statusText || 'Không rõ lỗi'}`);
-        } else if (error.request) {
-          console.error('Error request:', error.request);
-          setError('Không thể kết nối tới máy chủ. Vui lòng kiểm tra kết nối mạng và API endpoint.');
-        } else {
-          console.error('Error message:', error.message);
-          setError(`Lỗi: ${error.message}`);
-        }
+        //console.error('Error fetching user details:', error);
+        setUserData(null);
+        setApiLoaded(false);
+        setError('Lỗi khi tải thông tin người dùng: ' + (error.message || 'Vui lòng thử lại sau'));
       } finally {
         setLoading(false);
       }
     };
     
-    fetchUserDetails();
+    // Xử lý khi API thất bại - trích xuất thành hàm riêng để tái sử dụng
+    const handleApiFailure = (error) => {
+      //console.error('Fallback to context data:', error);
+      
+      if (error.response && error.response.status === 403) {
+        setError('Bạn không có quyền xem thông tin người dùng');
+      } else if (currentUser) {
+        const basicUserData = {
+          email: currentUser.email,
+          firstname: currentUser.firstName || '',
+          lastname: currentUser.lastName || '',
+          phone: '',
+          day_of_birth: '',
+          role: currentUser.role || 'USER',
+          active: true
+        };
+        
+        setUserData(basicUserData);
+        setApiLoaded(false);
+        
+        setFormData({
+          email: basicUserData.email || '',
+          firstname: basicUserData.firstname || '',
+          lastname: basicUserData.lastname || '',
+          phone: basicUserData.phone || '',
+          day_of_birth: basicUserData.day_of_birth || '',
+          password: '',
+          confirmPassword: ''
+        });
+      } else {
+        throw new Error('Không thể tải thông tin người dùng');
+      }
+    };
     
-    // Nếu không phải admin, lấy lịch sử đặt sân
-    if (!isAdmin && currentUser?.user_id) {
+    fetchUserData();
+    
+    // Lấy lịch sử đặt sân của người dùng
+    if (currentUser?.user_id) {
       const fetchBookingHistory = async () => {
         try {
-          setLoading(true);
-          console.log('Fetching booking history for user ID:', currentUser.user_id);
           const response = await bookingAPI.getUserBookings(currentUser.user_id);
-          console.log('Booking history response:', response);
           
-          if (response.data && response.data.result) {
+          if (response && response.data) {
+            if (response.data.result) {
             setBookingHistory(response.data.result);
-          } else if (response.data) {
-            // Trường hợp API trả về data trực tiếp, không qua result
+            } else {
+              // Trường hợp API trả về data trực tiếp
             setBookingHistory(Array.isArray(response.data) ? response.data : [response.data]);
+            }
           } else {
-            console.warn('API booking không trả về dữ liệu');
+            setBookingHistory([]);
           }
         } catch (error) {
-          console.error('Lỗi khi lấy lịch sử đặt sân:', error);
-          if (error.response) {
-            console.error('Error booking response:', error.response.status, error.response.data);
-          }
-        } finally {
-          setLoading(false);
+          //console.error('Lỗi khi lấy lịch sử đặt sân:', error);
+          setBookingHistory([]);
         }
       };
       
       fetchBookingHistory();
+    } else {
+      setBookingHistory([]);
     }
-  }, [isAuthenticated, currentUser, navigate, isAdmin]);
+  }, [isAuthenticated, currentUser, navigate, setUserInfo]);
   
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -247,6 +344,7 @@ const UserProfilePage = () => {
     if (editMode) {
       // Reset form data if canceling edit
       setFormData({
+        email: '',
         firstname: userData?.firstname || '',
         lastname: userData?.lastname || '',
         phone: userData?.phone || '',
@@ -260,54 +358,81 @@ const UserProfilePage = () => {
     setUpdateError(null);
   };
   
-  const handleProfileUpdate = async (e) => {
+  const handleProfileUpdate = (e) => {
     e.preventDefault();
     
-    // Validate form
+    // Validate password if user is updating it
     if (formData.password && formData.password !== formData.confirmPassword) {
-      setUpdateError('Mật khẩu không khớp.');
+      setUpdateError('Mật khẩu và xác nhận mật khẩu không khớp');
       return;
     }
     
-    try {
+    setLoading(true);
       setUpdateError(null);
-      // Create update data object
+    
+    // Luôn gửi đầy đủ các trường, sử dụng giá trị hiện tại nếu không thay đổi
       const updateData = {
+      email: userData.email,
         firstname: formData.firstname,
         lastname: formData.lastname,
         phone: formData.phone,
-        day_of_birth: formData.day_of_birth
-      };
-      
-      // Only include password if it's provided
-      if (formData.password) {
-        updateData.password = formData.password;
-      }
-      
-      // Call API to update user profile
-      console.log('Gửi request cập nhật thông tin người dùng:', updateData);
-      const response = await userAPI.updateUser(userData.user_id, updateData);
-      console.log('Kết quả cập nhật:', response);
-      
-      // Cập nhật userData trong state
-      const updatedUserData = {
-        ...userData,
-        ...updateData
-      };
-      
-      setUserData(updatedUserData);
-      setUpdateSuccess(true);
-      setEditMode(false);
-      
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      if (error.response) {
-        console.error('Error response:', error.response.status, error.response.data);
-        setUpdateError(`Lỗi: ${error.response.status} - ${error.response.data?.message || 'Không thể cập nhật hồ sơ'}`);
-      } else {
-        setUpdateError('Không thể cập nhật hồ sơ. Vui lòng thử lại sau.');
+      // QUAN TRỌNG: Backend yêu cầu luôn có password trong request
+      password: formData.password && formData.password.trim() !== '' 
+        ? formData.password 
+        : 'qa1234' // Password mặc định khi không đổi
+    };
+    
+    // Kiểm tra và định dạng ngày sinh trước khi gửi
+    if (formData.day_of_birth && formData.day_of_birth.trim() !== '') {
+      try {
+        // Đảm bảo định dạng đúng YYYY-MM-DD
+        const dateObj = new Date(formData.day_of_birth);
+        const formattedDate = dateObj.toISOString().split('T')[0];
+        updateData.day_of_birth = formattedDate;
+      } catch (error) {
+        //console.error('Lỗi khi định dạng ngày:', error);
+        updateData.day_of_birth = formData.day_of_birth.trim();
       }
     }
+    
+    //console.log('Dữ liệu gửi đến API:', JSON.stringify(updateData));
+    
+    // Gọi API để cập nhật thông tin người dùng
+    userAPI.updateUser(userData.user_id, updateData)
+      .then(response => {
+        //console.log('Cập nhật thành công:', response.data);
+        setUpdateSuccess(true);
+        setUpdateError(null);
+        
+        // Thoát khỏi chế độ chỉnh sửa
+      setEditMode(false);
+      
+        // Làm mới dữ liệu người dùng từ API
+        refreshUserData();
+      })
+      .catch(error => {
+        //console.error('Lỗi khi cập nhật:', error);
+      if (error.response) {
+          //console.log('Error status:', error.response.status);
+          //console.log('Error data:', error.response.data);
+          
+          // Hiển thị thông báo lỗi chi tiết hơn
+          if (error.response.data && error.response.data.message) {
+            setUpdateError(error.response.data.message);
+          } else if (error.response.data && error.response.data.error) {
+            setUpdateError(error.response.data.error);
+      } else {
+            setUpdateError('Lỗi ' + error.response.status + ': ' + 
+              (error.response.statusText || 'Không thể cập nhật thông tin'));
+      }
+        } else {
+          setUpdateError('Không thể kết nối đến máy chủ. Vui lòng thử lại sau.');
+    }
+        setUpdateSuccess(false);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
   
   const handleLogout = () => {
@@ -316,17 +441,22 @@ const UserProfilePage = () => {
   };
 
   const getUserRoleName = () => {
-    if (!userData) return 'Người dùng';
+    if (!userData) return '';
     
     // Xử lý nhiều dạng role khác nhau từ API
-    let roleName = 'Người dùng';
+    let roleName = '';
     
-    if (userData.role) {
+    // Đầu tiên kiểm tra role_id từ API /users/me
+    if (userData.role_id) {
+      roleName = userData.role_id;
+    }
+    // Nếu không có role_id, kiểm tra role từ các API khác
+    else if (userData.role) {
       if (typeof userData.role === 'string') {
         // Trường hợp role là string
         roleName = userData.role;
       } else if (userData.role.roleName) {
-        // Trường hợp { roleName: "ADMIN" }
+        // Trường hợp { roleName: "USER" }
         roleName = userData.role.roleName;
       } else if (userData.role.roleId) {
         // Trường hợp { roleId: "USER" }
@@ -338,61 +468,103 @@ const UserProfilePage = () => {
     }
     
     // Chuyển đổi tên vai trò thành tiếng Việt
-    switch(roleName) {
-      case 'ADMIN': return 'Quản trị viên';
-      case 'USER': return 'Người dùng';
-      default: return roleName;
-    }
+    if (roleName === 'USER') return 'Người dùng';
+    if (roleName === 'OWNER') return 'Chủ sân';
+    if (roleName === 'ADMIN') return 'Quản trị viên';
+    
+    return roleName || ''; 
   };
 
   const getAccountStatus = () => {
-    if (!userData) return 'Không xác định';
-    
-    if (userData.active === true || userData.active === 'true') {
       return 'Đang hoạt động';
-    } else if (userData.active === false || userData.active === 'false') {
-      return 'Bị vô hiệu hóa';
-    }
-    
-    return 'Đang hoạt động'; // Default value
   };
 
   // Lấy tên hiển thị của người dùng
   const getDisplayName = () => {
-    if (userData?.firstname && userData?.lastname) {
+    if (!userData) return '';
+    
+    if (userData.firstname && userData.lastname) {
       return `${userData.firstname} ${userData.lastname}`;
-    } else if (userData?.firstname) {
+    } else if (userData.firstname) {
       return userData.firstname;
-    } else if (userData?.lastname) {
+    } else if (userData.lastname) {
       return userData.lastname;
-    } else if (userData?.email) {
+    } else if (userData.email) {
       return userData.email.split('@')[0];
-    } else {
-      return 'Người dùng';
     }
+    
+    return '';
   };
 
-  // Lấy chữ cái đầu tiên cho avatar - ưu tiên lastName
-  const getAvatarLetter = () => {
-    if (userData?.lastname) {
-      return userData.lastname.charAt(0).toUpperCase();
-    } else if (userData?.firstname) {
-      return userData.firstname.charAt(0).toUpperCase();
-    } else if (userData?.email) {
-      return userData.email.charAt(0).toUpperCase();
-    } else {
-      return 'U';
+  // Lấy đầy đủ lastname cho avatar
+  const getAvatarName = () => {
+    if (!userData) return '';
+    
+    if (userData.lastname) {
+      return userData.lastname;
+    } else if (userData.firstname) {
+      return userData.firstname;
+    } else if (userData.email) {
+      return userData.email.split('@')[0];
     }
+    
+    return '';
   };
-  
-  // Lấy dữ liệu từ token hoặc API tùy thuộc vào trạng thái tải
-  const getDataSource = () => {
-    return apiLoaded ? "API chi tiết" : "Token đăng nhập";
+
+  // Hàm làm mới dữ liệu người dùng từ API
+  const refreshUserData = () => {
+    userAPI.getCurrentUserMe()
+      .then(response => {
+        if (response && response.data) {
+          let userData;
+          
+          if (response.data.result) {
+            userData = response.data.result;
+          } else {
+            userData = response.data;
+          }
+          
+          setUserData(userData);
+          setApiLoaded(true);
+          
+          // Cập nhật form data
+          setFormData({
+            email: userData.email || '',
+            firstname: userData.firstname || '',
+            lastname: userData.lastname || '',
+            phone: userData.phone || '',
+            day_of_birth: userData.day_of_birth || '',
+            password: '',
+            confirmPassword: ''
+          });
+          
+          // Lưu vào sessionStorage
+          try {
+            sessionStorage.setItem('currentUser', JSON.stringify(userData));
+          } catch (e) {
+            //console.error('Lỗi khi lưu user cache:', e);
+          }
+        }
+      })
+      .catch(error => {
+        //console.error('Lỗi khi làm mới dữ liệu:', error);
+      });
   };
 
   return (
     <div className="profile-page">
       <Navbar />
+      
+      {/* Hiển thị thông báo lỗi phân quyền nếu có */}
+      {forbiddenError && (
+        <div className="forbidden-error-banner">
+          <i className="fas fa-exclamation-triangle"></i>
+          <span>{forbiddenError.message}</span>
+          <button onClick={() => setForbiddenError(null)}>
+            <i className="fas fa-times"></i>
+          </button>
+        </div>
+      )}
       
       <div className="profile-container">
         <div className="container">
@@ -401,10 +573,19 @@ const UserProfilePage = () => {
           </div>
           
           <div className="profile-content">
+            {loading ? (
+              <div className="loading-container">
+                <div className="loading">
+                  <i className="fas fa-spinner fa-spin"></i>
+                  <span>Đang tải thông tin...</span>
+                </div>
+              </div>
+            ) : userData && userData.email ? (
+              <>
             <div className="profile-sidebar">
               <div className="user-profile-card">
                 <div className="avatar-circle">
-                  <span className="avatar-text">{userData?.lastname || 'User'}</span>
+                      <span className="avatar-text">{getAvatarName()}</span>
                 </div>
                 <div className="user-info">
                   <h3 className="user-name">{getDisplayName()}</h3>
@@ -420,15 +601,6 @@ const UserProfilePage = () => {
                   <span>Thông tin cá nhân</span>
                 </button>
                 
-                {isAdmin ? (
-                  <button 
-                    className={`menu-item ${activeTab === 'admin' ? 'active' : ''}`} 
-                    onClick={() => handleTabChange('admin')}
-                  >
-                    <i className="fas fa-cogs"></i>
-                    <span>Quản trị hệ thống</span>
-                  </button>
-                ) : (
                   <button 
                     className={`menu-item ${activeTab === 'bookings' ? 'active' : ''}`} 
                     onClick={() => handleTabChange('bookings')}
@@ -436,7 +608,6 @@ const UserProfilePage = () => {
                     <i className="fas fa-calendar-alt"></i>
                     <span>Lịch sử đặt sân</span>
                   </button>
-                )}
                 
                 <button className="menu-item logout" onClick={handleLogout}>
                   <i className="fas fa-sign-out-alt"></i>
@@ -455,27 +626,6 @@ const UserProfilePage = () => {
                     </button>
                   </div>
                   
-                  {error && (
-                    <div className="info-message">
-                      <i className="fas fa-info-circle"></i>
-                      <span>{error}</span>
-                    </div>
-                  )}
-                  
-                  {/* Debug information - Hiển thị dữ liệu hiện tại - Đã tắt */}
-                  {/* Đã tắt để sản phẩm gọn gàng hơn
-                  {process.env.NODE_ENV === 'development' && (
-                    <div className="debug-data">
-                      <strong>Debug - User Data <span className={`data-source ${apiLoaded ? 'api' : 'token'}`}>
-                        {getDataSource()}
-                      </span>:</strong>
-                      <pre style={{ overflow: 'auto', maxHeight: '100px' }}>
-                        {JSON.stringify(userData, null, 2)}
-                      </pre>
-                    </div>
-                  )}
-                  */}
-                  
                   {updateSuccess && (
                     <div className="success-message">
                       <i className="fas fa-check-circle"></i>
@@ -490,13 +640,6 @@ const UserProfilePage = () => {
                     </div>
                   )}
                   
-                  {loading ? (
-                    <div className="loading">
-                      <i className="fas fa-spinner fa-spin"></i>
-                      <span>Đang tải thông tin...</span>
-                    </div>
-                  ) : (
-                    <>
                       {editMode ? (
                         <form onSubmit={handleProfileUpdate} className="profile-form">
                           <div className="form-row">
@@ -561,7 +704,7 @@ const UserProfilePage = () => {
                                 id="day_of_birth"
                                 name="day_of_birth"
                                 className="form-control"
-                                value={formData.day_of_birth}
+                                value={formData.day_of_birth || ''}
                                 onChange={handleInputChange}
                               />
                             </div>
@@ -579,7 +722,7 @@ const UserProfilePage = () => {
                           
                           <div className="form-row">
                             <div className="form-group">
-                              <label htmlFor="password">Mật khẩu mới (để trống nếu không đổi)</label>
+                              <label htmlFor="password">Mật khẩu mới (nhập mật khẩu cũ nếu không đổi)</label>
                               <input
                                 type="password"
                                 id="password"
@@ -604,8 +747,8 @@ const UserProfilePage = () => {
                           </div>
                           
                           <div className="form-actions">
-                            <button type="submit" className="save-button">
-                              Lưu thay đổi
+                            <button type="submit" className="save-button" disabled={loading}>
+                              {loading ? 'Đang lưu...' : 'Lưu thay đổi'}
                             </button>
                           </div>
                         </form>
@@ -620,18 +763,18 @@ const UserProfilePage = () => {
                                   <div className="info-value">
                                     {userData?.firstname && userData?.lastname 
                                       ? `${userData.firstname} ${userData.lastname}`
-                                      : (userData?.firstname || userData?.lastname || 'Chưa cập nhật')}
+                                      : (userData?.firstname || userData?.lastname || '')}
                                   </div>
                                 </div>
                                 
                                 <div className="info-group">
                                   <div className="info-label">Email</div>
-                                  <div className="info-value">{userData?.email || 'Chưa cập nhật'}</div>
+                                  <div className="info-value">{userData?.email || ''}</div>
                                 </div>
                                 
                                 <div className="info-group">
                                   <div className="info-label">Số điện thoại</div>
-                                  <div className="info-value">{userData?.phone || 'Chưa cập nhật'}</div>
+                                  <div className="info-value">{userData?.phone || ''}</div>
                                 </div>
                                 
                                 <div className="info-group">
@@ -646,13 +789,13 @@ const UserProfilePage = () => {
                               <div className="info-grid">
                                 <div className="info-group">
                                   <div className="info-label">Mã người dùng</div>
-                                  <div className="info-value user-id">{userData?.user_id || 'Không có'}</div>
+                                  <div className="info-value user-id">{userData?.user_id || ''}</div>
                                 </div>
                                 
                                 <div className="info-group">
                                   <div className="info-label">Vai trò</div>
                                   <div className="info-value">
-                                    <span className={`role-badge ${isAdmin ? 'admin' : 'user'}`}>
+                                    <span className="role-badge user">
                                       {getUserRoleName()}
                                     </span>
                                   </div>
@@ -676,48 +819,33 @@ const UserProfilePage = () => {
                           </div>
                         </div>
                       )}
-                    </>
+                    </div>
                   )}
-                </div>
-              )}
-              
-              {activeTab === 'admin' && isAdmin && (
-                <AdminPanel />
-              )}
-              
-              {activeTab === 'bookings' && !isAdmin && (
+                  
+                  {activeTab === 'bookings' && (
                 <div className="bookings-tab">
                   <div className="tab-header">
                     <h2>Lịch sử đặt sân</h2>
                   </div>
                   
-                  {loading ? (
-                    <div className="loading">
-                      <i className="fas fa-spinner fa-spin"></i>
-                      <span>Đang tải dữ liệu...</span>
-                    </div>
-                  ) : bookingHistory.length > 0 ? (
+                      {bookingHistory.length > 0 ? (
                     <div className="booking-list">
-                      {/* Booking history content */}
                       {bookingHistory.map(booking => (
                         <div key={booking.booking_id} className="booking-card">
                           <div className="booking-header">
                             <div className="booking-id">Mã đặt sân: #{booking.booking_id}</div>
                             <div className={`booking-status ${booking.status?.toLowerCase()}`}>
-                              {booking.status === 'PENDING' ? 'Đang chờ' : 
-                               booking.status === 'CONFIRMED' ? 'Đã xác nhận' :
-                               booking.status === 'COMPLETED' ? 'Hoàn thành' :
-                               booking.status === 'CANCELLED' ? 'Đã hủy' : booking.status}
+                                  {bookingStatuses[booking.status] || booking.status}
                             </div>
                           </div>
                           <div className="booking-body">
                             <div className="booking-detail">
                               <i className="fas fa-map-marker-alt"></i>
-                              <span>Sân: {booking.stadium_name || booking.stadiumName || 'Không có thông tin'}</span>
+                                  <span>Sân: {booking.stadium_name || booking.stadiumName || ''}</span>
                             </div>
                             <div className="booking-detail">
                               <i className="far fa-calendar-alt"></i>
-                              <span>Ngày: {formatDate(booking.booking_date || booking.bookingDate)}</span>
+                                  <span>Ngày: {formatDateTime(booking.booking_date || booking.bookingDate)}</span>
                             </div>
                             <div className="booking-detail">
                               <i className="far fa-clock"></i>
@@ -743,6 +871,13 @@ const UserProfilePage = () => {
                 </div>
               )}
             </div>
+              </>
+            ) : (
+              <div className="no-data">
+                <i className="fas fa-exclamation-circle"></i>
+                <p>{error || 'Không thể lấy dữ liệu từ máy chủ. Vui lòng thử lại sau.'}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

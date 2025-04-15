@@ -50,6 +50,21 @@ public class UserController {
         return apiResponse;
     }
 
+    @GetMapping("/me")
+    ApiResponse<UserResponse> getCurrentUser() {
+        // Lấy thông tin của người dùng hiện tại từ SecurityContext
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        log.info("Getting current user info for email: {}", email);
+        
+        // Tìm user theo email
+        UserResponse user = userService.findUserByEmail(email);
+        
+        ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(user);
+        return apiResponse;
+    }
+
     @PutMapping("/{userId}")
     ApiResponse<UserResponse> updateUser(@PathVariable("userId") String userId
             , @RequestBody UserUpdateRequest request){

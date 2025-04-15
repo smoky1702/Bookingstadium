@@ -15,6 +15,7 @@ import com.example.bookingStadium.repository.BillRepository;
 import com.example.bookingStadium.repository.BookingRepository;
 import com.example.bookingStadium.repository.StadiumBookingDetailRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -29,7 +30,8 @@ public class BillService {
     private StadiumBookingDetailRepository stadiumBookingDetailRepository;
     @Autowired
     private BookingRepository bookingRepository;
-
+    @Autowired
+    private SecurityUtils securityUtils;
 
     public Bill createBill(BillCreationRequest request){
        StadiumBookingDetail stadiumBookingDetail = stadiumBookingDetailRepository
@@ -40,24 +42,44 @@ public class BillService {
                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_EXISTED));
 
        String userId = booking.getUserId();
+       
+       // Kiểm tra người dùng hiện tại có phải là người tạo booking hoặc OWNER
+       if (!securityUtils.isOwner() && !securityUtils.isCurrentUser(userId)) {
+           throw new AppException(ErrorCode.FORBIDDEN);
+       }
+       
        Bill bill = billMapper.toBill(request);
        bill.setFinalPrice(price);
        bill.setUserId(userId);
        return billRepository.save(bill);
     }
 
+    @PreAuthorize("hasAnyAuthority('SCOPE_ADMIN', 'SCOPE_OWNER')")
     public List<Bill> getBill(){
         return billRepository.findAll();
     }
 
     public BillResponse findBill(String billId){
-        return billMapper.toBillResponse(billRepository.findById(billId)
-                .orElseThrow(() -> new AppException(ErrorCode.BILL_NOT_EXISTED)));
+        Bill bill = billRepository.findById(billId)
+                .orElseThrow(() -> new AppException(ErrorCode.BILL_NOT_EXISTED));
+        
+        // Chỉ cho phép người sở hữu bill, admin hoặc owner xem chi tiết bill
+        if (!securityUtils.isAdmin() && !securityUtils.isOwner() 
+                && !securityUtils.isCurrentUser(bill.getUserId())) {
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+        
+        return billMapper.toBillResponse(bill);
     }
 
     public BillResponse updateBill(String billId, BillUpdateRequest request){
         Bill bill = billRepository.findById(billId)
                 .orElseThrow(() -> new AppException(ErrorCode.BILL_NOT_EXISTED));
+
+        // Chỉ cho phép chủ hóa đơn, admin hoặc owner cập nhật bill
+        if (!securityUtils.isAdmin() && !securityUtils.isOwner() && !securityUtils.isCurrentUser(bill.getUserId())) {
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
 
         String stadiumBookingId = bill.getStadiumBookingId();
 
@@ -72,6 +94,7 @@ public class BillService {
         return billMapper.toBillResponse(billRepository.save(bill));
     }
 
+    @PreAuthorize("hasAuthority('SCOPE_OWNER')")
     public BillResponse billPaid(String billId, BillPaidRequest request){
         Bill bill = billRepository.findById(billId)
                 .orElseThrow(() -> new AppException(ErrorCode.BILL_NOT_EXISTED));
@@ -80,10 +103,16 @@ public class BillService {
     }
 
     public void deleteBill(String billId){
-        billRepository.findById(billId).orElseThrow(() -> new AppException(ErrorCode.BILL_NOT_EXISTED));
+        Bill bill = billRepository.findById(billId)
+                .orElseThrow(() -> new AppException(ErrorCode.BILL_NOT_EXISTED));
+                
+        // Chỉ cho phép admin hoặc owner xóa bill
+        if (!securityUtils.isAdmin() && !securityUtils.isOwner()) {
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+        
         billRepository.deleteById(billId);
     }
-
 }
 
 

@@ -66,26 +66,25 @@
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #1a4297 0%, #0d6efd 100%);
+    background-color: #0056b3;
+    color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 12px;
-    box-shadow: 0 4px 12px rgba(26, 66, 151, 0.3);
-    border: 4px solid #ffffff;
+    margin-bottom: 10px;
+    font-size: 18px;
+    font-weight: bold;
     overflow: hidden;
   }
   
   .avatar-text {
-    color: white;
-    font-size: 20px;
-    font-weight: 600;
-    line-height: 1;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    padding: 0 5px;
+    padding: 0 10px;
     text-align: center;
-    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 16px;
   }
   
   .user-info {
@@ -726,4 +725,108 @@
   /* Cải thiện hiển thị text */
   .profile-tab, .bookings-tab, .sidebar-menu {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  
+  /* CSS cho thông báo lỗi phân quyền */
+  .forbidden-error-banner {
+    background-color: #ff9800;
+    color: white;
+    padding: 12px 20px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    animation: slideDown 0.3s ease;
+  }
+  
+  @keyframes slideDown {
+    from {
+      transform: translateY(-20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  .forbidden-error-banner i {
+    margin-right: 10px;
+    font-size: 18px;
+  }
+  
+  .forbidden-error-banner button {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  
+  .forbidden-error-banner button:hover {
+    opacity: 0.8;
+  }
+  
+  /* CSS cho thông tin nguồn dữ liệu */
+  .data-source-info {
+    background-color: #f8f9fa;
+    border-left: 3px solid #6c757d;
+    padding: 8px 12px;
+    margin-bottom: 15px;
+    font-size: 0.85rem;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+  }
+  
+  .data-source-info i {
+    margin-right: 8px;
+    font-size: 14px;
+  }
+  
+  /* Cập nhật thông báo forbidden error */
+  .forbidden-error-banner {
+    position: relative;
+    z-index: 1000;
+    margin: 0 auto 20px;
+    max-width: 1200px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* CSS cho loading-container và no-data */
+  .loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 300px;
+    width: 100%;
+  }
+  
+  .no-data {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    width: 100%;
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    padding: 30px;
+    text-align: center;
+  }
+  
+  .no-data i {
+    font-size: 48px;
+    color: #f44336;
+    margin-bottom: 20px;
+  }
+  
+  .no-data p {
+    color: #666;
+    font-size: 16px;
+    margin: 0;
   }

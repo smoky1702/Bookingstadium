@@ -62,7 +62,7 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
   // Lấy giờ làm việc cho ngày đã chọn
   const getWorkingHoursForSelectedDate = (dateString) => {
     if (!workSchedule || !workSchedule.length || !dateString) {
-      return { openingHours: "08:00", closingHours: "22:00" }; // Giá trị mặc định nếu không có dữ liệu
+      return { openingHours: "8:00", closingHours: "22:00" }; // Giá trị mặc định nếu không có dữ liệu
     }
     
     const selectedDate = new Date(dateString);
@@ -80,7 +80,7 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
     }
     
     // Nếu không tìm thấy, trả về giờ mặc định
-    return { openingHours: "08:00", closingHours: "22:00" };
+    return { openingHours: "8:00", closingHours: "22:00" };
   };
   
   // Cập nhật giờ làm việc khi chọn ngày
@@ -98,19 +98,12 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
         try {
           const userResponse = await userAPI.getCurrentUser();
           const userId = userResponse.data?.user_id || userResponse.data?.id;
-          if (userId) {
-            console.log('Lấy được user_id:', userId);
-          } else {
-            console.warn('API getCurrentUser không trả về user_id:', userResponse.data);
-          }
+          // Nếu không lấy được user_id, không cần ghi log hoặc hiển thị lỗi
         } catch (error) {
-          console.error('Error fetching user info:', error);
           if (error.response?.status === 401 || error.response?.status === 403) {
             logout();
             if (typeof openLoginModal === 'function') {
               openLoginModal();
-            } else {
-              console.error('openLoginModal is not a function');
             }
           }
         }
@@ -137,7 +130,6 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
       
       // Nếu dữ liệu đã có trong cache, dùng lại luôn
       if (bookingCache[bookingData.dateOfBooking]) {
-        console.log(`Lấy dữ liệu từ cache cho ngày ${bookingData.dateOfBooking}`);
         const validBookings = bookingCache[bookingData.dateOfBooking].filter(
           booking => booking.status === 'CONFIRMED' || booking.status === 'PENDING'
         );
@@ -150,39 +142,29 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
         isLoadingRef.current = true;
         lastDateRef.current = bookingData.dateOfBooking;
         
-        console.log(`Đang gọi API cho ngày ${bookingData.dateOfBooking}`);
         const response = await stadiumAPI.getStadiumBooking(stadiumId, bookingData.dateOfBooking);
         
         const bookings = response.data?.result || response.data || [];
-        console.log('Received bookings:', bookings);
         
         // Lọc các booking có trạng thái CONFIRMED hoặc PENDING
         const validBookings = bookings.filter(
           booking => booking.status === 'CONFIRMED' || booking.status === 'PENDING'
         );
-        console.log('Valid bookings:', validBookings);
         
         // Lưu vào cache và cập nhật state
         setBookingCache(prev => ({...prev, [bookingData.dateOfBooking]: bookings}));
         setBookedTimeSlots(validBookings);
       } catch (error) {
-        console.error('Error fetching bookings:', error);
-        
         // Xử lý lỗi 404 - khung giờ trống
         if (error.response?.status === 404) {
-          console.log('Không có booking nào cho ngày này, hiển thị trống');
           setBookedTimeSlots([]);
           return;
         }
         
         if (error.response?.status === 401 || error.response?.status === 403) {
-          setBookingError('Vui lòng đăng nhập để xem danh sách đặt sân.');
-          logout();
-          if (typeof openLoginModal === 'function') {
-            openLoginModal();
-          } else {
-            console.error('openLoginModal is not a function');
-          }
+          // KHÔNG logout() người dùng, chỉ hiển thị thông báo
+          setBookingError('Không thể tải thông tin đặt sân. Vui lòng làm mới trang hoặc đăng nhập lại.');
+          setBookedTimeSlots([]);
         } else {
           setBookingError('Không thể tải danh sách đặt sân. Sân có thể còn trống hoặc hệ thống đang gặp sự cố.');
           setBookedTimeSlots([]);
@@ -207,48 +189,33 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
       if (!stadium || !location) return;
       
       try {
-        console.log("Đang gọi API workSchedule...");
         const response = await workScheduleAPI.getWorkSchedule();
-        console.log("Nhận được response từ API workSchedule:", response);
         
         if (response && response.data) {
-          console.log("Data từ API workSchedule:", response.data);
-          
           let scheduleData = [];
           
           // Kiểm tra các cấu trúc phản hồi có thể có
           if (response.data.result && Array.isArray(response.data.result)) {
-            console.log("Sử dụng cấu trúc response.data.result");
             scheduleData = response.data.result;
           } else if (response.data.data && Array.isArray(response.data.data)) {
-            console.log("Sử dụng cấu trúc response.data.data");
             scheduleData = response.data.data;
           } else if (Array.isArray(response.data)) {
-            console.log("Sử dụng cấu trúc response.data array");
             scheduleData = response.data;
           }
           
-          console.log("Dữ liệu lịch làm việc trước khi lọc:", scheduleData);
-          
           // Lọc lịch làm việc theo locationId
           const locationIdToMatch = location.locationId || location.id;
-          console.log("Đang lọc theo locationId:", locationIdToMatch);
           
           const stadiumSchedule = scheduleData.filter(schedule => {
             const scheduleLocationId = schedule.locationId || schedule.location_id;
-            const isMatched = scheduleLocationId == locationIdToMatch;
-            console.log(`Schedule item locationId: ${scheduleLocationId}, match: ${isMatched}`);
-            return isMatched;
+            return scheduleLocationId == locationIdToMatch;
           });
-          
-          console.log("Lịch làm việc sau khi lọc:", stadiumSchedule);
           
           // Chỉ cần thiết lập trạng thái khi có dữ liệu lịch làm việc từ API
           setWorkSchedule(stadiumSchedule);
         }
       } catch (error) {
-        console.error('Lỗi khi lấy lịch làm việc:', error);
-        console.log('Chi tiết lỗi:', error.response || error.message);
+        // Không làm gì cả khi không lấy được lịch làm việc - sẽ dùng giờ mặc định
       }
     };
     
@@ -322,113 +289,87 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
         try {
           const stadiumResponse = await stadiumAPI.getStadiumById(stadiumId);
           stadiumData = stadiumResponse.data?.result || stadiumResponse.data;
-        } catch (stadiumError) {
-          try {
-            const altStadiumResponse = await stadiumAPI.getStadiumByIdAlternative(stadiumId);
-            stadiumData = altStadiumResponse.data?.result || altStadiumResponse.data;
-          } catch (altError) {
+          
+          if (!stadiumData) {
             throw new Error("Không thể lấy thông tin sân");
           }
-        }
+          
+          setStadium(stadiumData);
 
-        if (!stadiumData) {
-          throw new Error("Không thể lấy thông tin sân");
-        }
-
-        console.log('>> Dữ liệu sân từ API:', stadiumData);
-        console.log('>> Trạng thái (status) sân:', stadiumData.status);
-
-        setStadium(stadiumData);
-
-        // 2. Lấy toàn bộ địa điểm
-        let locationList = [];
-        try {
+          // 2. Lấy toàn bộ địa điểm
           const locationsResponse = await locationAPI.getLocations();
-          locationList = locationsResponse.data?.result || locationsResponse.data || [];
-        } catch (locationsError) {
-          try {
-            const altLocationsResponse = await locationAPI.getLocationsAlternative();
-            locationList = altLocationsResponse.data?.result || altLocationsResponse.data || [];
-          } catch (altError) {
-            console.error("Lỗi khi lấy danh sách địa điểm:", altError);
-          }
-        }
-
-        if (locationList.length > 0 && stadiumData.locationId) {
-          const matchedLocation = locationList.find(loc =>
-            loc.locationId === stadiumData.locationId || loc.id === stadiumData.locationId
-          );
-          if (matchedLocation) {
-            setLocation(matchedLocation);
-          } else {
-            try {
-              const locationResponse = await locationAPI.getLocationById(stadiumData.locationId);
-              const locationData = locationResponse.data?.result || locationResponse.data;
-              if (locationData) {
-                setLocation(locationData);
+          const locationList = locationsResponse.data?.result || locationsResponse.data || [];
+          
+          if (locationList.length > 0 && stadiumData.locationId) {
+            const matchedLocation = locationList.find(loc =>
+              loc.locationId === stadiumData.locationId || loc.id === stadiumData.locationId
+            );
+            
+            if (matchedLocation) {
+              setLocation(matchedLocation);
+            } else {
+              // Thử lấy trực tiếp thông tin địa điểm theo ID
+              try {
+                const locationResponse = await locationAPI.getLocationById(stadiumData.locationId);
+                const locationData = locationResponse.data?.result || locationResponse.data;
+                if (locationData) {
+                  setLocation(locationData);
+                }
+              } catch (locationError) {
+                // Bỏ qua lỗi, không hiển thị địa điểm
               }
-            } catch (locationError) {
-              console.error("Lỗi khi lấy thông tin địa điểm trực tiếp:", locationError);
             }
           }
-        }
 
-        // 3. Lấy toàn bộ loại sân
-        let typeList = [];
-        try {
+          // 3. Lấy toàn bộ loại sân
           const typesResponse = await typeAPI.getTypes();
-          typeList = typesResponse.data?.result || typesResponse.data || [];
-        } catch (typesError) {
-          try {
-            const altTypesResponse = await typeAPI.getTypesAlternative();
-            typeList = altTypesResponse.data?.result || altTypesResponse.data || [];
-          } catch (altError) {
-            console.error("Lỗi khi lấy danh sách loại sân:", altError);
-          }
-        }
-
-        if (typeList.length > 0 && stadiumData.typeId) {
-          const matchedType = typeList.find(t =>
-            t.typeId == stadiumData.typeId || t.id == stadiumData.typeId
-          );
-          if (matchedType) {
-            setType(matchedType);
-          } else {
-            try {
-              const typeResponse = await typeAPI.getTypeById(stadiumData.typeId);
-              const typeData = typeResponse.data?.result || typeResponse.data;
-              if (typeData) {
-                setType(typeData);
+          const typeList = typesResponse.data?.result || typesResponse.data || [];
+          
+          if (typeList.length > 0 && stadiumData.typeId) {
+            const matchedType = typeList.find(t =>
+              t.typeId == stadiumData.typeId || t.id == stadiumData.typeId
+            );
+            
+            if (matchedType) {
+              setType(matchedType);
+            } else {
+              try {
+                const typeResponse = await typeAPI.getTypeById(stadiumData.typeId);
+                const typeData = typeResponse.data?.result || typeResponse.data;
+                if (typeData) {
+                  setType(typeData);
+                }
+              } catch (typeError) {
+                // Bỏ qua lỗi, không hiển thị loại sân
               }
-            } catch (typeError) {
-              console.error("Lỗi khi lấy thông tin loại sân trực tiếp:", typeError);
             }
           }
-        }
 
-        // 4. Lấy hình ảnh
-        try {
-          const imagesResponse = await imageAPI.getImagesByStadiumId(stadiumId);
-          const images = imagesResponse.data?.result || imagesResponse.data;
-          if (Array.isArray(images) && images.length > 0) {
-            setStadiumImage(images[0]);
+          // 4. Lấy hình ảnh
+          try {
+            const imagesResponse = await imageAPI.getImagesByStadiumId(stadiumId);
+            const images = imagesResponse.data?.result || imagesResponse.data;
+            if (Array.isArray(images) && images.length > 0) {
+              setStadiumImage(images[0]);
+            }
+          } catch (imageError) {
+            // Bỏ qua lỗi, không hiển thị hình ảnh
           }
-        } catch (imageError) {
-          console.error("Lỗi khi lấy hình ảnh sân:", imageError);
-        }
 
-        // 5. Lấy đánh giá
-        try {
-          const evaluationsResponse = await evaluationAPI.getEvaluationsByStadiumId(stadiumId);
-          let evaluationsList = evaluationsResponse.data?.result || evaluationsResponse.data || [];
-          setEvaluations(evaluationsList);
-        } catch (evaluationError) {
-          console.error("Lỗi khi lấy đánh giá:", evaluationError);
+          // 5. Lấy đánh giá
+          try {
+            const evaluationsResponse = await evaluationAPI.getEvaluationsByStadiumId(stadiumId);
+            let evaluationsList = evaluationsResponse.data?.result || evaluationsResponse.data || [];
+            setEvaluations(evaluationsList);
+          } catch (evaluationError) {
+            // Bỏ qua lỗi, không hiển thị đánh giá
+          }
+        } catch (error) {
+          throw new Error("Không thể lấy thông tin sân");
         }
 
         setLoading(false);
       } catch (error) {
-        console.error("Lỗi khi lấy thông tin chi tiết sân:", error);
         setError("Có lỗi xảy ra khi tải thông tin sân. Vui lòng thử lại sau.");
         setLoading(false);
       }
@@ -533,16 +474,8 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
       return;
     }
 
-    console.log('Checking time slots:', {
-      selectedStart: startTime,
-      selectedEnd: endTime,
-      bookedTimeSlots: bookedTimeSlots
-    });
-
     // Kiểm tra trùng lặp với các khung giờ đã đặt
     const hasConflict = bookedTimeSlots.some(slot => {
-      console.log('Checking slot:', slot);
-      
       const bookedStart = new Date(`1970-01-01T${slot.startTime}`);
       const bookedEnd = new Date(`1970-01-01T${slot.endTime}`);
 
@@ -554,7 +487,6 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
       );
 
       if (isOverlap) {
-        console.log('Found overlap with slot:', slot);
         setTimeError(`Khung giờ từ ${slot.startTime} đến ${slot.endTime} đã được đặt. Vui lòng chọn khung giờ khác.`);
         return true;
       }
@@ -564,13 +496,11 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
       const minutesAfterPrevious = (bookedStart - end) / (1000 * 60);
 
       if (bookedEnd <= start && minutesBeforeNext < 10) {
-        console.log('Gap too small before booking:', slot);
         setTimeError(`Cần ít nhất 10 phút giữa các đơn đặt sân (${slot.startTime}-${slot.endTime}).`);
         return true;
       }
 
       if (bookedStart >= end && minutesAfterPrevious < 10) {
-        console.log('Gap too small after booking:', slot);
         setTimeError(`Cần ít nhất 10 phút giữa các đơn đặt sân (${slot.startTime}-${slot.endTime}).`);
         return true;
       }
@@ -579,7 +509,6 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
     });
 
     if (!hasConflict) {
-      console.log('No conflicts found');
       setTimeError(null);
     }
   };
@@ -636,14 +565,11 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
       setBookingError(null);
       return true;
     } catch (error) {
-      console.error('Error checking availability:', error);
       if (error.response?.status === 401 || error.response?.status === 403) {
         setBookingError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
         logout();
         if (typeof openLoginModal === 'function') {
           openLoginModal();
-        } else {
-          console.error('openLoginModal is not a function');
         }
       } else {
         setBookingError('Không thể kiểm tra tính khả dụng. Vui lòng thử lại sau.');
@@ -693,56 +619,186 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
       setIsProcessingBooking(true);
       setBookingError(null);
 
-      const bookingResponse = await bookingAPI.createBooking({
-        userId: currentUser?.user_id,
-        locationId: stadium.locationId,
-        dateOfBooking: bookingData.dateOfBooking,
-        startTime: bookingData.startTime,
-        endTime: bookingData.endTime,
-        phone: phoneNumber // Sử dụng số điện thoại từ modal
-      });
+      // Tính toán tổng số giờ để sử dụng ở nhiều nơi
+      const totalHours = calculateTotalHours();
+      const totalPrice = stadium.price * totalHours;
+
+      // Định dạng dateOfBooking thành yyyy-MM-dd (SQL Date format)
+      const dateObj = new Date(bookingData.dateOfBooking);
+      const formattedDate = dateObj.toISOString().split('T')[0];
+
+      //(SQL Time format)
+      const formattedStartTime = bookingData.startTime.includes(':00') ? 
+        bookingData.startTime : `${bookingData.startTime}:00`;
+      const formattedEndTime = bookingData.endTime.includes(':00') ? 
+        bookingData.endTime : `${bookingData.endTime}:00`;
+
+      // Cải thiện cách lấy userId - thử lấy từ token trước
+      let userId = null;
+      
+      // Thử lấy từ currentUser
+      if (currentUser?.user_id) {
+        userId = currentUser.user_id;
+        console.log("Lấy userId từ currentUser:", userId);
+      }
+      
+      // Nếu không có từ currentUser, thử lấy từ token
+      if (!userId) {
+        const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+        if (token) {
+          try {
+            const tokenParts = token.split('.');
+            if (tokenParts.length === 3) {
+              const payload = JSON.parse(atob(tokenParts[1]));
+              console.log("JWT payload:", payload);
+              // Kiểm tra các trường có thể chứa userId
+              userId = payload.userId || payload.user_id || payload.id;
+              console.log("Lấy userId từ token:", userId);
+            }
+          } catch (e) {
+            console.error("Lỗi khi phân tích token:", e);
+          }
+        }
+      }
+      
+      // Nếu vẫn không có, gọi API
+      if (!userId) {
+        try {
+          console.log("Gọi API để lấy thông tin user");
+          const userResponse = await userAPI.getCurrentUser();
+          console.log("User API response:", userResponse.data);
+          
+          // Xử lý các kiểu cấu trúc response khác nhau
+          if (userResponse?.data?.result && Array.isArray(userResponse.data.result) && userResponse.data.result.length > 0) {
+            userId = userResponse.data.result[0].user_id || userResponse.data.result[0].userId;
+          } else if (userResponse?.data?.result?.user_id) {
+            userId = userResponse.data.result.user_id;
+          } else if (userResponse?.data?.user_id) {
+            userId = userResponse.data.user_id;
+          } else if (userResponse?.data?.id) {
+            userId = userResponse.data.id;
+          } else {
+            // Tìm trường có thể chứa userId
+            const data = userResponse?.data?.result || userResponse?.data;
+            if (data) {
+              for (const key in data) {
+                if (key.toLowerCase().includes('id') && typeof data[key] === 'string') {
+                  userId = data[key];
+                  console.log("Tìm được userId từ trường:", key, userId);
+                  break;
+                }
+              }
+            }
+          }
+          
+          if (!userId) {
+            throw new Error("Không tìm thấy user_id");
+          }
+          
+          console.log("Đã lấy được userId:", userId);
+        } catch (error) {
+          console.error("Lỗi khi lấy thông tin user:", error);
+          setBookingError("Không thể xác định thông tin người dùng. Vui lòng đăng nhập lại.");
+          return;
+        }
+      }
+
+      // Dữ liệu gửi đi - log để kiểm tra
+      const bookingRequestData = {
+        user_id: userId,
+        location_id: stadium.locationId,
+        date_of_booking: formattedDate,
+        start_time: formattedStartTime,
+        end_time: formattedEndTime
+      };
+      
+      console.log("Dữ liệu booking gửi đi:", bookingRequestData);
+
+      // 1. Tạo Booking
+      const bookingResponse = await bookingAPI.createBooking(bookingRequestData);
 
       if (bookingResponse.data && bookingResponse.data.result) {
         const newBookingId = bookingResponse.data.result.bookingId || bookingResponse.data.result.stadium_booking_id;
 
-        await stadiumBookingDetailAPI.createStadiumBookingDetail({
-          stadium_booking_id: newBookingId,
-          type_id: stadium.typeId,
-          stadium_id: stadium.stadiumId
-        });
+        // Kiểm tra xem bookingId có giá trị không
+        if (!newBookingId) {
+          throw new Error("Không nhận được booking ID từ server");
+        }
 
-        await billAPI.createBill({
-          stadiumBookingId: newBookingId
-        });
+        try {
+          // 2. Tạo Stadium_Booking_Details với total_hours và price
+          const detailResponse = await stadiumBookingDetailAPI.createStadiumBookingDetail({
+            stadium_booking_id: newBookingId,
+            type_id: stadium.typeId,
+            stadium_id: stadium.stadiumId
+          });
 
-        setBookingSuccess(true);
-        setShowConfirmModal(false);
+          if (detailResponse.data && detailResponse.data.result) {
+            // Lấy ID của BookingDetail từ response - kiểm tra nhiều cách đặt tên trường
+            const bookingDetailId = detailResponse.data.result.id || 
+                                   detailResponse.data.result.stadiumBookingDetailId || 
+                                   detailResponse.data.result.stadium_booking_detail_id || 
+                                   detailResponse.data.result.detailId;
+            
+            if (bookingDetailId) {
+              localStorage.setItem(`booking_${newBookingId}_detailId`, bookingDetailId);
+            } else {
+              // Tìm ID theo các mẫu khác nhau
+              const allKeys = Object.keys(detailResponse.data.result);
+              const potentialIdKey = allKeys.find(key => 
+                key.toLowerCase().includes('id') || 
+                key.toLowerCase().includes('_id') || 
+                key.toLowerCase().includes('detailid')
+              );
+              
+              if (potentialIdKey) {
+                const foundId = detailResponse.data.result[potentialIdKey];
+                localStorage.setItem(`booking_${newBookingId}_detailId`, foundId);
+              }
+            }
+          }
 
-        // Cập nhật danh sách booking
-        setAllBookings(prev => [...prev, bookingResponse.data.result]);
+          // Không tạo Bill, BookingDetailPage
+          
+          setBookingSuccess(true);
+          setShowConfirmModal(false);
 
-        setBookingData({
-          userId: currentUser?.user_id || '',
-          locationId: stadium.locationId,
-          dateOfBooking: '',
-          startTime: '',
-          endTime: ''
-        });
+          // Cập nhật danh sách booking
+          setAllBookings(prev => [...prev, bookingResponse.data.result]);
 
-        setTimeout(() => {
-          navigate(`/booking/${newBookingId}`);
-        }, 2000);
+          setBookingData({
+            userId: currentUser?.user_id || '',
+            locationId: stadium.locationId,
+            dateOfBooking: '',
+            startTime: '',
+            endTime: ''
+          });
+
+          // Chuyển hướng đến trang chi tiết đặt sân
+          setTimeout(() => {
+            navigate(`/booking/${newBookingId}`);
+          }, 1000);
+        } catch (detailError) {
+          // Vẫn chuyển hướng ngay cả khi có lỗi tạo booking detail
+          setBookingSuccess(true);
+          setShowConfirmModal(false);
+          setBookingError(`Đặt sân thành công nhưng không thể tạo chi tiết đặt sân. Vui lòng liên hệ quản trị viên.`);
+
+          // Chuyển hướng đến trang chi tiết đặt sân sau một khoảng thời gian
+          setTimeout(() => {
+            navigate(`/booking/${newBookingId}`);
+          }, 2000);
+        }
       }
     } catch (error) {
-      console.error('Error booking stadium:', error);
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        setBookingError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-        logout();
-        if (typeof openLoginModal === 'function') {
-          openLoginModal();
-        } else {
-          console.error('openLoginModal is not a function');
-        }
+      // KHÔNG tự động đăng xuất người dùng khi gặp lỗi xác thực
+      // Hiển thị thông báo lỗi rõ ràng và giữ người dùng đăng nhập
+      if (error.response?.status === 401) {
+        setBookingError('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+      } else if (error.response?.status === 403) {
+        setBookingError('Bạn không có quyền thực hiện hành động này. Vui lòng liên hệ quản trị viên.');
+      } else if (error.response?.data?.message) {
+        setBookingError(`Lỗi: ${error.response.data.message}`);
       } else {
         setBookingError('Đặt sân thất bại. Vui lòng thử lại sau.');
       }
@@ -812,14 +868,11 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
           return;
         }
       } catch (error) {
-        console.error('Error fetching user info:', error);
         if (error.response?.status === 401 || error.response?.status === 403) {
           setEvaluationError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
           logout();
           if (typeof openLoginModal === 'function') {
             openLoginModal();
-          } else {
-            console.error('openLoginModal is not a function');
           }
         } else {
           setEvaluationError('Không thể lấy thông tin người dùng. Vui lòng thử lại sau.');
@@ -859,14 +912,11 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
         }, 3000);
       }
     } catch (error) {
-      console.error('Error creating evaluation:', error);
       if (error.response?.status === 401 || error.response?.status === 403) {
         setEvaluationError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
         logout();
         if (typeof openLoginModal === 'function') {
           openLoginModal();
-        } else {
-          console.error('openLoginModal is not a function');
         }
       } else if (error.response?.data?.message) {
         setEvaluationError(`Lỗi: ${error.response.data.message}`);
