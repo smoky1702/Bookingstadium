@@ -30,7 +30,7 @@ public class EvaluationService {
 
     @Autowired
     private StadiumRepository stadiumRepository;
-
+    
     @Autowired
     private SecurityUtils securityUtils;
 

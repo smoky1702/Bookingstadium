@@ -23,4 +23,7 @@ public class BookingUpdateRequest {
 
     @JsonProperty("end_time")
     private Time endTime;
+
+    @JsonProperty("status")
+    private BookingStatus status;
 }

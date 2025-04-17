@@ -26,4 +26,7 @@ public class BookingResponse {
 
     @JsonProperty("end_time")
     private Time endTime;
+
+    @JsonProperty("status")
+    private String status;
 }

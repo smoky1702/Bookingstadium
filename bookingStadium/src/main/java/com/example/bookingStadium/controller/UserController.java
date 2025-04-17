@@ -30,6 +30,12 @@ public class UserController {
         return apiResponse;
     }
 
+    @PostMapping("/owner")
+    ApiResponse<Users> createOwner(@RequestBody @Valid UserCreationRequest request){
+        ApiResponse<Users> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(userService.createOwner(request));
+        return apiResponse;
+    }
 
     @GetMapping
     ApiResponse<List<Users>> getUsers() {

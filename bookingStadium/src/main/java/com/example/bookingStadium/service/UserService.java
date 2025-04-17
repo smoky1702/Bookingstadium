@@ -35,6 +35,7 @@ public class UserService {
     private RoleRepository roleRepository;
     @Autowired
     private EmailService emailService;
+
     @Autowired
     private SecurityUtils securityUtils;
 
@@ -58,7 +59,27 @@ public class UserService {
                 "Cảm ơn bạn đã đăng ký. Hãy bắt đầu đặt sân ngay nào!"
         );
 
+        return userRepository.save(user);
+    }
 
+    public Users createOwner(UserCreationRequest request){
+        if(userRepository.existsByEmail(request.getEmail())){
+            throw new AppException(ErrorCode.EMAIL_EXISTED);
+        }
+
+        Roles roles = roleRepository.findById("OWNER")
+                .orElseThrow(()-> new AppException(ErrorCode.ROLE_NOT_EXISTED));
+
+        Users user = userMapper.toUser(request);
+        user.setRole(roles);
+        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+
+        emailService.sendSimpleMessage(
+                user.getEmail(),
+                "Chào mừng bạn đến với hệ thống đặt sân!",
+                "Cảm ơn bạn đã đăng ký. Bây giờ bạn có thể quản lý sân của bạn trên hệ thống của chúng tôi!"
+        );
         return userRepository.save(user);
     }
 
@@ -99,13 +120,10 @@ public class UserService {
         Users user = userRepository.findById(user_Id)
                 .orElseThrow(()-> new AppException(ErrorCode.USER_NOT_EXISTED));
         userMapper.updateUser(user, request);
-        
-        // Chỉ cập nhật mật khẩu khi được cung cấp
         if (request.getPassword() != null && !request.getPassword().isEmpty()) {
             PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
             user.setPassword(passwordEncoder.encode(request.getPassword()));
         }
-        
         return userMapper.toUserResponse(userRepository.save(user));
     }
 

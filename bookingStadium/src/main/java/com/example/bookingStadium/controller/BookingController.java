@@ -3,7 +3,7 @@ package com.example.bookingStadium.controller;
 import com.example.bookingStadium.dto.request.Booking.BookingCreationRequest;
 import com.example.bookingStadium.dto.request.Booking.BookingUpdateRequest;
 import com.example.bookingStadium.dto.response.ApiResponse;
-import com.example.bookingStadium.dto.response.Booking.BookingResponse;
+import com.example.bookingStadium.dto.response.BookingResponse;
 import com.example.bookingStadium.entity.Booking;
 import com.example.bookingStadium.service.BookingService;
 import jakarta.validation.Valid;

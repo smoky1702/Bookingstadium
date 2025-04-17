@@ -13,10 +13,10 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class SecurityUtils {
-    
+
     @Autowired
     private UserRepository userRepository;
-    
+
     /**
      * Kiểm tra xem người dùng hiện tại có phải là người dùng có ID cụ thể không
      */
@@ -26,7 +26,7 @@ public class SecurityUtils {
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
         return currentUser.getUser_id().equals(userId);
     }
-    
+
     /**
      * Kiểm tra xem người dùng hiện tại có quyền ADMIN không
      */
@@ -36,7 +36,7 @@ public class SecurityUtils {
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
         return "ADMIN".equalsIgnoreCase(currentUser.getRole().getRoleId());
     }
-    
+
     /**
      * Kiểm tra xem người dùng hiện tại có quyền OWNER không
      */
@@ -46,7 +46,7 @@ public class SecurityUtils {
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
         return "OWNER".equalsIgnoreCase(currentUser.getRole().getRoleId());
     }
-    
+
     /**
      * Lấy ID của người dùng hiện tại
      */
@@ -56,7 +56,7 @@ public class SecurityUtils {
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
         return currentUser.getUser_id();
     }
-    
+
     /**
      * Kiểm tra xem người dùng hiện tại có quyền thao tác với tài nguyên không
      * Người dùng có quyền nếu họ là chủ sở hữu tài nguyên hoặc là ADMIN
@@ -72,14 +72,14 @@ public class SecurityUtils {
         if (isAdmin()) {
             return true;
         }
-        
+
         // Tìm booking
         Booking booking = bookingRepository.findById(bookingId)
                 .orElse(null);
         if (booking == null) {
             return false;
         }
-        
+
         // Kiểm tra người dùng hiện tại có phải chủ sở hữu
         return isCurrentUser(booking.getUserId());
     }
@@ -88,7 +88,7 @@ public class SecurityUtils {
         if (authentication == null || !authentication.isAuthenticated()) {
             return false;
         }
-        
+
         return isOwnerOfBooking(bookingId);
     }
 } 

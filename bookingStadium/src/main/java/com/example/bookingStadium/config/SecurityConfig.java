@@ -28,7 +28,7 @@ import javax.crypto.spec.SecretKeySpec;
 public class SecurityConfig {
 
     private final String[] PUBLIC_ENDPOINTS = {"/users", "/auth/login", "/auth/token"
-            , "/auth/introspect"};
+            , "/auth/introspect", "/users/owner"};
 
     @NonFinal
     @Value("${jwt.signerKey}")
@@ -54,9 +54,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/users/{userId}").authenticated()
                         .requestMatchers(HttpMethod.GET, "/users/me").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/users/{userId}").authenticated()
+
                         .requestMatchers(HttpMethod.GET, "/bill/{billId}").authenticated()
                         .requestMatchers(HttpMethod.POST,"/bill/user").hasAuthority("SCOPE_USER")
                         .requestMatchers(HttpMethod.PUT, "/bill/update/{billId}").hasAnyAuthority("SCOPE_USER", "SCOPE_OWNER")
+
+                        .requestMatchers(HttpMethod.GET, "/bill/{billId}").authenticated() //Chỉnh sửa service
+                        .requestMatchers(HttpMethod.POST,"/bill").hasAnyAuthority("SCOPE_USER")
+                        .requestMatchers(HttpMethod.PUT, "/bill/update/{billId}").hasAnyAuthority("SCOPE_USER")
 
                         // API ADMIN
                         .requestMatchers(HttpMethod.GET, "/users").hasAuthority("SCOPE_ADMIN")

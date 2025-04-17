@@ -59,17 +59,17 @@ public class StadiumService {
     public StadiumReponse updateStadium(String stadiumId, StadiumUpdateRequest request){
         Stadium stadium = stadiumRepository.findById(stadiumId)
                 .orElseThrow(()-> new AppException(ErrorCode.STADIUM_NOT_EXISTED));
-        
+
         // Kiểm tra quyền: chỉ chủ sở hữu địa điểm hoặc admin mới có thể cập nhật
         String locationId = stadium.getLocationId();
         Stadium_Location location = stadiumLocationRepository.findById(locationId)
                 .orElseThrow(() -> new AppException(ErrorCode.STADIUM_LOCATION_NOT_EXISTED));
-        
-        if (!securityUtils.isAdmin() && 
-            !securityUtils.isCurrentUser(location.getUserId())) {
+
+        if (!securityUtils.isAdmin() &&
+                !securityUtils.isCurrentUser(location.getUserId())) {
             throw new AppException(ErrorCode.FORBIDDEN);
         }
-        
+
         stadiumMapper.updateStadium(stadium, request);
         return stadiumMapper.toStadiumReponse(stadiumRepository.save(stadium));
     }
@@ -78,17 +78,17 @@ public class StadiumService {
     public void detele(String stadiumId){
         Stadium stadium = stadiumRepository.findById(stadiumId)
                 .orElseThrow(()-> new AppException(ErrorCode.STADIUM_NOT_EXISTED));
-        
+
         // Kiểm tra quyền: chỉ chủ sở hữu địa điểm hoặc admin mới có thể xóa
         String locationId = stadium.getLocationId();
         Stadium_Location location = stadiumLocationRepository.findById(locationId)
                 .orElseThrow(() -> new AppException(ErrorCode.STADIUM_LOCATION_NOT_EXISTED));
-        
-        if (!securityUtils.isAdmin() && 
-            !securityUtils.isCurrentUser(location.getUserId())) {
+
+        if (!securityUtils.isAdmin() &&
+                !securityUtils.isCurrentUser(location.getUserId())) {
             throw new AppException(ErrorCode.FORBIDDEN);
         }
-        
+
         stadiumRepository.deleteById(stadiumId);
     }
 
@@ -96,26 +96,26 @@ public class StadiumService {
         // Kiểm tra sân có tồn tại không
         Stadium stadium = stadiumRepository.findById(stadiumId)
                 .orElseThrow(() -> new AppException(ErrorCode.STADIUM_NOT_EXISTED));
-                
+
         // Lấy locationId của sân
         String locationId = stadium.getLocationId();
 
         // Lấy tất cả booking theo locationId và date
         List<Booking> allLocationBookings = bookingRepository.findByDateOfBookingAndLocationId(date, locationId);
-        
+
         // Lọc chỉ giữ lại những booking có stadiumId tương ứng trong StadiumBookingDetail
         List<Booking> stadiumBookings = new ArrayList<>();
-        
+
         for (Booking booking : allLocationBookings) {
             // Tìm detail cho booking này
             StadiumBookingDetail detail = stadiumBookingDetailRepository.findByBookingId(booking.getBookingId());
-            
+
             // Kiểm tra xem booking này có thuộc về sân hiện tại không
             if (detail != null && stadiumId.equals(detail.getStadiumId())) {
                 stadiumBookings.add(booking);
             }
         }
-        
+
         return stadiumBookings;
     }
 }

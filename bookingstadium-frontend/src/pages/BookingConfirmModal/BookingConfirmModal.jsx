@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './BookingConfirmModal.css';
+import '../BookingConfirmModal/BookingConfirmModal.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimesCircle, faCheckCircle, faCalendarAlt, faClock, faUser, faMapMarkerAlt, faPhone, faEnvelope, faFutbol, faCreditCard, faIdCard, faBirthdayCake, faTag, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
 import { userAPI } from '../../services/apiService';

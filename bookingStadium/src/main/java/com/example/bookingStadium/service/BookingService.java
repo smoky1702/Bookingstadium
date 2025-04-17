@@ -2,7 +2,7 @@ package com.example.bookingStadium.service;
 
 import com.example.bookingStadium.dto.request.Booking.BookingCreationRequest;
 import com.example.bookingStadium.dto.request.Booking.BookingUpdateRequest;
-import com.example.bookingStadium.dto.response.Booking.BookingResponse;
+import com.example.bookingStadium.dto.response.BookingResponse;
 import com.example.bookingStadium.entity.Booking;
 import com.example.bookingStadium.exception.AppException;
 import com.example.bookingStadium.exception.ErrorCode;
@@ -32,10 +32,9 @@ public class BookingService {
 
     public Booking createBooking(BookingCreationRequest request){
         Booking booking = stadiumBookingMapper.toBooking(request);
-
+        
         // Đảm bảo userId của booking là người dùng hiện tại
         booking.setUserId(securityUtils.getCurrentUserId());
-
         Time startTime = booking.getStartTime();
         LocalDate date = booking.getDateOfBooking();
         // Chuyển java.sql.Time thành LocalTime
@@ -76,6 +75,12 @@ public class BookingService {
         }
         
         stadiumBookingMapper.updateBooking(booking, request);
+        
+        // Thêm xử lý đặc biệt cho trường status
+        if (request.getStatus() != null) {
+            booking.setStatus(request.getStatus());
+        }
+        
         return stadiumBookingMapper.toBookingMapper(bookingRepository.save(booking));
     }
 
