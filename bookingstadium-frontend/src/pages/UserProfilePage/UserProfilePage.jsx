@@ -50,6 +50,12 @@ const UserProfilePage = () => {
   // Thêm state để lưu locations
   const [locations, setLocations] = useState({});
   
+  // Thêm state cho phân trang
+  const [currentBookingPage, setCurrentBookingPage] = useState(1);
+  const [currentBillPage, setCurrentBillPage] = useState(1);
+  const bookingsPerPage = 10;
+  const billsPerPage = 5;
+  
   // Lấy cấu hình trạng thái đặt sân và hóa đơn từ API
   useEffect(() => {
     const getStatuses = async () => {
@@ -416,8 +422,17 @@ const UserProfilePage = () => {
                 startTime: booking.startTime || booking.start_time,
                 endTime: booking.endTime || booking.end_time,
                 status: booking.status || '',
-                price: booking.price || booking.totalPrice || 0
+                price: booking.price || booking.totalPrice || 0,
+                dateCreated: booking.dateCreated || booking.date_created || booking.createdAt || new Date().toISOString()
               };
+            });
+            
+            // Sắp xếp đặt sân theo ngày tạo mới nhất
+            processedBookings.sort((a, b) => {
+              // Ưu tiên sắp xếp theo ngày đặt sân
+              const dateA = new Date(a.dateOfBooking );
+              const dateB = new Date(b.dateOfBooking );
+              return dateB - dateA;
             });
             
             setBookingHistory(processedBookings);
@@ -456,6 +471,13 @@ const UserProfilePage = () => {
                 dateCreated: bill.dateCreated || bill.date_created,
                 datePaid: bill.datePaid || bill.date_paid
               };
+            });
+            
+            // Sắp xếp hóa đơn theo ngày tạo mới nhất
+            processedBills.sort((a, b) => {
+              const dateA = new Date(a.dateCreated || 0);
+              const dateB = new Date(b.dateCreated || 0);
+              return dateB - dateA;
             });
             
             setBillHistory(processedBills);
@@ -963,39 +985,43 @@ const UserProfilePage = () => {
                   
                       {bookingHistory.length > 0 ? (
                     <div className="booking-list">
-                      {bookingHistory.map((booking, index) => {
-                        const bookingId = booking.stadium_booking_id || booking.bookingId || booking.id || `booking-${index}`;
-                        
+                      {bookingHistory
+                        .slice((currentBookingPage - 1) * bookingsPerPage, currentBookingPage * bookingsPerPage)
+                        .map((booking, index) => {
+                        const bookingId = booking.bookingId || booking.id || booking.stadium_booking_id || `booking-${index}`;
                         const locationId = booking.locationId || booking.location_id;
-                        const locationData = locations[locationId] || {};
                         
-                        // Tạo địa chỉ đầy đủ
-                        let fullAddress = locationData.address || '';
-                        if (locationData.city) {
-                          fullAddress += fullAddress ? `, ${locationData.city}` : locationData.city;
-                        }
-                        if (locationData.district) {
-                          fullAddress += fullAddress ? `, ${locationData.district}` : locationData.district;
-                        }
-                        if (locationData.province) {
-                          fullAddress += fullAddress ? `, ${locationData.province}` : locationData.province;
+                        let locationData = { locationName: 'Đang tải...' };
+                        let fullAddress = 'Đang tải địa chỉ...';
+                        
+                        if (locations && locationId && locations[locationId]) {
+                          const matchedLocation = locations[locationId];
+                          
+                          if (matchedLocation) {
+                            locationData = matchedLocation;
+                            
+                            // Tạo địa chỉ đầy đủ
+                            const addressParts = [];
+                            if (matchedLocation.address) addressParts.push(matchedLocation.address);
+                            if (matchedLocation.ward) addressParts.push(matchedLocation.ward);
+                            if (matchedLocation.district) addressParts.push(matchedLocation.district);
+                            if (matchedLocation.city) addressParts.push(matchedLocation.city);
+                            if (matchedLocation.province) addressParts.push(matchedLocation.province);
+                            
+                            fullAddress = addressParts.join(', ');
+                          }
                         }
                         
                         return (
-                          <div key={`booking-${index}`} className="booking-card">
+                          <div key={`booking-${index}`} className={`booking-card ${booking.status && booking.status.toLowerCase()}`}>
                             <div className="booking-header">
                               <div className="booking-id">Mã đặt sân: #{bookingId}</div>
-                              <div className={`booking-status ${(booking.status || '').toLowerCase().replace(/\s+/g, '')}`}>
-                                {bookingStatuses[booking.status] || booking.status || 'Đang chờ'}
+                              <div className={`booking-status ${(booking.status || 'pending').toLowerCase().replace(/\s+/g, '')}`}>
+                                {bookingStatuses[booking.status] || booking.status || 'Chờ xác nhận'}
                               </div>
                             </div>
                             
                             <div className="booking-body">
-                              <div className="booking-detail">
-                                <i className="fas fa-tag"></i>
-                                <span>Mã booking: {bookingId}</span>
-                              </div>
-                              
                               <div className="booking-detail">
                                 <i className="fas fa-database"></i>
                                 <span>Stadium Booking ID: {booking.stadium_booking_id || bookingId}</span>
@@ -1030,6 +1056,31 @@ const UserProfilePage = () => {
                           </div>
                         );
                       })}
+                      
+                      {/* Phân trang cho booking */}
+                      {bookingHistory.length > bookingsPerPage && (
+                        <div className="pagination">
+                          <button 
+                            onClick={() => setCurrentBookingPage(prev => Math.max(prev - 1, 1))}
+                            disabled={currentBookingPage === 1}
+                            className="pagination-button"
+                          >
+                            <i className="fas fa-chevron-left"></i> Trang trước
+                          </button>
+                          
+                          <span className="pagination-info">
+                            Trang {currentBookingPage} / {Math.ceil(bookingHistory.length / bookingsPerPage)}
+                          </span>
+                          
+                          <button 
+                            onClick={() => setCurrentBookingPage(prev => Math.min(prev + 1, Math.ceil(bookingHistory.length / bookingsPerPage)))}
+                            disabled={currentBookingPage === Math.ceil(bookingHistory.length / bookingsPerPage)}
+                            className="pagination-button"
+                          >
+                            Trang sau <i className="fas fa-chevron-right"></i>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="no-bookings">
@@ -1051,7 +1102,9 @@ const UserProfilePage = () => {
                   
                   {billHistory.length > 0 ? (
                     <div className="bill-list">
-                      {billHistory.map((bill, index) => {
+                      {billHistory
+                        .slice((currentBillPage - 1) * billsPerPage, currentBillPage * billsPerPage)
+                        .map((bill, index) => {
                         const billId = bill.bill_id || bill.billId || `bill-${index}`;
                         
                         return (
@@ -1110,6 +1163,31 @@ const UserProfilePage = () => {
                           </div>
                         );
                       })}
+                      
+                      {/* Phân trang cho bills */}
+                      {billHistory.length > billsPerPage && (
+                        <div className="pagination">
+                          <button 
+                            onClick={() => setCurrentBillPage(prev => Math.max(prev - 1, 1))}
+                            disabled={currentBillPage === 1}
+                            className="pagination-button"
+                          >
+                            <i className="fas fa-chevron-left"></i> Trang trước
+                          </button>
+                          
+                          <span className="pagination-info">
+                            Trang {currentBillPage} / {Math.ceil(billHistory.length / billsPerPage)}
+                          </span>
+                          
+                          <button 
+                            onClick={() => setCurrentBillPage(prev => Math.min(prev + 1, Math.ceil(billHistory.length / billsPerPage)))}
+                            disabled={currentBillPage === Math.ceil(billHistory.length / billsPerPage)}
+                            className="pagination-button"
+                          >
+                            Trang sau <i className="fas fa-chevron-right"></i>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="no-bills">

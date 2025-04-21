@@ -86,6 +86,7 @@ const BookingDetailPage = () => {
     switch(statusUpper) {
       case 'PENDING': return 'CHỜ XÁC NHẬN';
       case 'CONFIRMED': return 'ĐÃ XÁC NHẬN';
+      case 'COMPLETED': return 'HOÀN THÀNH';
       case 'CANCELLED': return 'ĐÃ HỦY';
       default: return statusUpper;
     }
@@ -265,6 +266,8 @@ const BookingDetailPage = () => {
     if (status === 'PENDING') {
       setProgressPercent(33);
     } else if (status === 'CONFIRMED') {
+      setProgressPercent(66);
+    } else if (status === 'COMPLETED') {
       setProgressPercent(100);
     } else if (status === 'CANCELLED') {
       setProgressPercent(0);
@@ -522,14 +525,14 @@ const BookingDetailPage = () => {
     try {
       setLoading(true);
       
-      if (!location) {
-        alert('Không tìm thấy thông tin địa điểm để đánh giá.');
+      if (!stadium) {
+        alert('Không tìm thấy thông tin sân để đánh giá.');
         return;
       }
       
       const response = await evaluationAPI.createEvaluation({
         user_id: currentUser.user_id,
-        location_id: location.locationId,
+        stadium_id: stadium.stadiumId,
         rating_score: rating,
         comment: comment
       });
@@ -585,9 +588,7 @@ const BookingDetailPage = () => {
   
   // Kiểm tra xem có thể đánh giá không
   const canLeaveFeedback = () => {
-    return booking && 
-           booking.status === 'COMPLETED' &&
-           new Date(booking.dateOfBooking) < new Date();
+    return booking && booking.status === 'COMPLETED';
   };
   
   return (
@@ -653,17 +654,17 @@ const BookingDetailPage = () => {
                 </div>
                 
                 <div className="status-step">
-                  <div className={`status-icon ${showPaymentModal ? 'active' : ''} ${progressPercent >= 66 ? 'completed' : ''} ${booking.status === 'CANCELLED' ? 'cancelled' : ''}`}>
+                  <div className={`status-icon ${booking.status === 'CONFIRMED' || booking.status === 'COMPLETED' ? 'completed' : ''} ${booking.status === 'CANCELLED' ? 'cancelled' : ''}`}>
                     <i className="fas fa-credit-card"></i>
                   </div>
-                  <div className={`status-text ${showPaymentModal || progressPercent >= 66 ? 'active' : ''}`}>Thanh toán</div>
+                  <div className={`status-text ${booking.status === 'CONFIRMED' || booking.status === 'COMPLETED' ? 'active' : ''}`}>Thanh toán</div>
                 </div>
                 
                 <div className="status-step">
-                  <div className={`status-icon ${progressPercent === 100 ? 'completed' : ''} ${booking.status === 'CANCELLED' ? 'cancelled' : ''}`}>
+                  <div className={`status-icon ${booking.status === 'COMPLETED' ? 'completed' : ''} ${booking.status === 'CANCELLED' ? 'cancelled' : ''}`}>
                     <i className="fas fa-check-circle"></i>
                   </div>
-                  <div className={`status-text ${progressPercent === 100 ? 'active' : ''}`}>Hoàn thành</div>
+                  <div className={`status-text ${booking.status === 'COMPLETED' ? 'active' : ''}`}>Hoàn thành</div>
                 </div>
               </div>
               

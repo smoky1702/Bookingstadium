@@ -360,6 +360,14 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
           try {
             const evaluationsResponse = await evaluationAPI.getEvaluationsByStadiumId(stadiumId);
             let evaluationsList = evaluationsResponse.data?.result || evaluationsResponse.data || [];
+            
+            // Sắp xếp đánh giá theo thứ tự ngày mới nhất trước
+            evaluationsList.sort((a, b) => {
+              const dateA = new Date(a.dateCreated || a.date_created || 0);
+              const dateB = new Date(b.dateCreated || b.date_created || 0);
+              return dateB - dateA; // Sắp xếp giảm dần (mới nhất đầu tiên)
+            });
+            
             setEvaluations(evaluationsList);
           } catch (evaluationError) {
             // Bỏ qua lỗi, không hiển thị đánh giá
@@ -1155,57 +1163,18 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
 
                   {isAuthenticated && (
                     <div className="evaluation-form-container">
-                      <h4>Viết đánh giá của bạn</h4>
-
-                      {evaluationSuccess && (
-                        <div className="evaluation-success">
-                          <FontAwesomeIcon icon={faCheckCircle} />
-                          <p>Đánh giá của bạn đã được gửi thành công!</p>
-                        </div>
-                      )}
-
-                      {evaluationError && (
-                        <div className="evaluation-error">
-                          <FontAwesomeIcon icon={faTimesCircle} />
-                          <p>{evaluationError}</p>
-                        </div>
-                      )}
-
-                      <form onSubmit={handleEvaluationSubmit} className="evaluation-form">
-                        <div className="rating-selector">
-                          <span>Đánh giá của bạn: </span>
-                          <div className="rating-stars">
-                            {[1, 2, 3, 4, 5].map(star => (
-                              <FontAwesomeIcon
-                                key={star}
-                                icon={faStar}
-                                className={star <= evaluationForm.rating ? 'star filled clickable' : 'star empty clickable'}
-                                onClick={() => handleRatingChange(star)}
-                              />
-                            ))}
-                          </div>
-                        </div>
-
-                        <textarea
-                          placeholder="Chia sẻ trải nghiệm của bạn..."
-                          value={evaluationForm.content}
-                          onChange={handleEvaluationContentChange}
-                          className="evaluation-content"
-                          rows={4}
-                        />
-
-                        <button type="submit" className="submit-evaluation">
-                          Gửi đánh giá
-                        </button>
-                      </form>
+                      <div className="feedback-policy-notice">
+                        <i className="fas fa-info-circle"></i>
+                        <p>Để đảm bảo tính xác thực, bạn chỉ có thể đánh giá sân này sau khi đã đặt và sử dụng sân thành công. Vui lòng sử dụng chức năng đánh giá trong trang chi tiết đặt sân (Tài khoản &gt; Lịch sử đặt sân &gt; Xem chi tiết &gt; Đánh giá) khi trạng thái đặt sân của bạn đã chuyển sang HOÀN THÀNH.</p>
+                      </div>
                     </div>
                   )}
 
-                  {!isAuthenticated && (
+                  {/* {!isAuthenticated && (
                     <div className="login-prompt">
-                      <p>Vui lòng <span style={{ color: '#1a4297', cursor: 'default' }}>đăng nhập</span> để viết đánh giá.</p>
+                      <p>Vui lòng <span style={{ color: '#1a4297', cursor: 'default' }}>đăng nhập</span> để xem các đánh giá.</p>
                     </div>
-                  )}
+                  )} */}
 
                   <div className="evaluations-list">
                     {evaluations.length === 0 ? (

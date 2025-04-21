@@ -558,14 +558,35 @@
 
 /* Cải thiện form đánh giá */
 .evaluation-form-container {
-  background-color: #f9f9f9;
+  margin-bottom: 30px;
+  background-color: #fafafa;
+  padding: 20px;
   border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.feedback-policy-notice {
+  background-color: #f8f9fa;
+  border-left: 4px solid #1a4297;
   padding: 15px;
   margin-bottom: 20px;
-  border: 1px solid #eee;
-  max-width: 700px;
-  margin-left: auto;
-  margin-right: auto;
+  border-radius: 4px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.feedback-policy-notice i {
+  color: #1a4297;
+  font-size: 18px;
+  margin-right: 10px;
+  margin-top: 2px;
+}
+
+.feedback-policy-notice p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #555;
 }
 
 .evaluation-form {
