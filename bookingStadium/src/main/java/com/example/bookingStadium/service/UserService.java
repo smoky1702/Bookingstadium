@@ -57,7 +57,7 @@ public class UserService {
                 user.getEmail(),
                 "Chào mừng bạn đến với hệ thống đặt sân!",
                 "Cảm ơn bạn đã đăng ký. Hãy bắt đầu đặt sân ngay nào!"
-        );
+        );  
 
         return userRepository.save(user);
     }

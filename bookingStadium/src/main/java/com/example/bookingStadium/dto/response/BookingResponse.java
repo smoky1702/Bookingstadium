@@ -12,6 +12,9 @@ import java.sql.Time;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BookingResponse {
+    @JsonProperty("stadium_booking_id")
+    private String bookingId;
+
     @JsonProperty("user_id")
     private String userId;
 

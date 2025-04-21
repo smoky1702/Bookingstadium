@@ -3,7 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import AuthContext from '../../context/AuthContext';
-import { bookingAPI, stadiumBookingDetailAPI, stadiumAPI, locationAPI, typeAPI, evaluationAPI, imageAPI } from '../../services/apiService';
+import { bookingAPI, stadiumBookingDetailAPI, stadiumAPI, locationAPI, typeAPI, evaluationAPI, imageAPI, paymentMethodAPI, billAPI } from '../../services/apiService';
 import '../BookingDetailPage/BookingDetailPage.css';
 
 const BookingDetailPage = () => {
@@ -31,6 +31,13 @@ const BookingDetailPage = () => {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [progressPercent, setProgressPercent] = useState(0);
+  
+  // Thêm các state cho phương thức thanh toán
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [billInfo, setBillInfo] = useState(null);
   
   // Hàm tiện ích
   const formatDate = (dateString) => {
@@ -258,7 +265,7 @@ const BookingDetailPage = () => {
     if (status === 'PENDING') {
       setProgressPercent(33);
     } else if (status === 'CONFIRMED') {
-      setProgressPercent(66);
+      setProgressPercent(100);
     } else if (status === 'CANCELLED') {
       setProgressPercent(0);
     }
@@ -366,7 +373,34 @@ const BookingDetailPage = () => {
   
   // Xử lý thanh toán
   const handlePayment = async () => {
-    alert('Chức năng thanh toán sẽ được cập nhật sau!');
+    try {
+      setLoading(true);
+      
+      // Lấy danh sách phương thức thanh toán
+      const response = await paymentMethodAPI.getPaymentMethod();
+      const methods = response.data?.result || [];
+      
+      if (methods.length === 0) {
+        setError('Không tìm thấy phương thức thanh toán nào.');
+        return;
+      }
+      
+      // Lưu danh sách phương thức thanh toán và mặc định chọn tiền mặt
+      setPaymentMethods(methods);
+      const cashMethod = methods.find(method => method.paymentMethodName.toLowerCase().includes('mặt')) || methods[0];
+      setSelectedPaymentMethod(cashMethod);
+      
+      // Cập nhật tiến trình sang bước thanh toán
+      setProgressPercent(66);
+      
+      // Hiển thị modal thanh toán
+      setShowPaymentModal(true);
+    } catch (error) {
+      console.error("Lỗi khi lấy phương thức thanh toán:", error);
+      setError('Không thể tải phương thức thanh toán. Vui lòng thử lại sau.');
+    } finally {
+      setLoading(false);
+    }
   };
   
   // Xử lý hủy đặt sân
@@ -418,6 +452,64 @@ const BookingDetailPage = () => {
   
   const handleRatingClick = (value) => {
     setRating(value);
+  };
+  
+  // Thêm hàm xử lý xác nhận thanh toán
+  const handleConfirmPayment = async () => {
+    if (!selectedPaymentMethod) {
+      setError('Vui lòng chọn phương thức thanh toán.');
+      return;
+    }
+    
+    try {
+      setProcessingPayment(true);
+      
+      // 1. Tạo hóa đơn với trạng thái UNPAID
+      const billData = {
+        stadium_booking_id: booking.id,
+        payment_method_id: selectedPaymentMethod.paymentMethodId,
+        user_id: currentUser.user_id,
+        final_price: calculateTotalPrice() || 0
+      };
+      
+      const billResponse = await billAPI.createUserBill(billData);
+      
+      if (!billResponse.data || !billResponse.data.result) {
+        throw new Error('Không thể tạo hóa đơn');
+      }
+      
+      const billId = billResponse.data.result.billId;
+      
+      // 2. Cập nhật trạng thái booking từ PENDING sang CONFIRMED
+      await bookingAPI.updateBooking(bookingId, {
+        status: 'CONFIRMED',
+        date_of_booking: booking.dateOfBooking,
+        start_time: booking.startTime,
+        end_time: booking.endTime
+      });
+      
+      // 3. Lấy thông tin chi tiết hóa đơn
+      const billDetailResponse = await billAPI.getBillById(billId);
+      if (billDetailResponse.data && billDetailResponse.data.result) {
+        setBillInfo(billDetailResponse.data.result);
+      }
+      
+      // 4. Cập nhật giao diện người dùng
+      setBooking({
+        ...booking,
+        status: 'CONFIRMED'
+      });
+      
+      setProgressPercent(100); // Cập nhật thanh tiến trình lên 100%
+      setSuccess('Đặt sân thành công. Vui lòng thanh toán tại quầy trước khi sử dụng sân.');
+      setShowPaymentModal(false);
+      
+    } catch (error) {
+      console.error("Lỗi khi xử lý thanh toán:", error);
+      setError('Không thể hoàn tất quá trình đặt sân. Vui lòng thử lại sau.');
+    } finally {
+      setProcessingPayment(false);
+    }
   };
   
   // Xử lý gửi đánh giá
@@ -494,7 +586,7 @@ const BookingDetailPage = () => {
   // Kiểm tra xem có thể đánh giá không
   const canLeaveFeedback = () => {
     return booking && 
-           booking.status === 'CONFIRMED' &&
+           booking.status === 'COMPLETED' &&
            new Date(booking.dateOfBooking) < new Date();
   };
   
@@ -554,17 +646,24 @@ const BookingDetailPage = () => {
                 </div>
                 
                 <div className="status-step">
-                  <div className={`status-icon ${booking.status !== 'CANCELLED' ? 'active' : 'cancelled'}`}>
+                  <div className={`status-icon ${booking.status !== 'CANCELLED' ? 'completed' : 'cancelled'}`}>
                     <i className="fas fa-edit"></i>
                   </div>
                   <div className={`status-text ${booking.status !== 'CANCELLED' ? 'active' : ''}`}>Đã đặt</div>
                 </div>
                 
                 <div className="status-step">
-                  <div className={`status-icon ${booking.status === 'CONFIRMED' ? 'active' : ''} ${booking.status === 'CANCELLED' ? 'cancelled' : ''}`}>
-                    <i className="fas fa-check"></i>
+                  <div className={`status-icon ${showPaymentModal ? 'active' : ''} ${progressPercent >= 66 ? 'completed' : ''} ${booking.status === 'CANCELLED' ? 'cancelled' : ''}`}>
+                    <i className="fas fa-credit-card"></i>
                   </div>
-                  <div className={`status-text ${booking.status === 'CONFIRMED' ? 'active' : ''}`}>Xác nhận</div>
+                  <div className={`status-text ${showPaymentModal || progressPercent >= 66 ? 'active' : ''}`}>Thanh toán</div>
+                </div>
+                
+                <div className="status-step">
+                  <div className={`status-icon ${progressPercent === 100 ? 'completed' : ''} ${booking.status === 'CANCELLED' ? 'cancelled' : ''}`}>
+                    <i className="fas fa-check-circle"></i>
+                  </div>
+                  <div className={`status-text ${progressPercent === 100 ? 'active' : ''}`}>Hoàn thành</div>
                 </div>
               </div>
               
@@ -813,6 +912,123 @@ const BookingDetailPage = () => {
               >
                 {loading ? 'Đang gửi...' : 'Gửi đánh giá'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Modal phương thức thanh toán */}
+      {showPaymentModal && (
+        <div className="payment-modal-overlay booking-detail-page">
+          <div className="payment-modal">
+            <div className="payment-modal-header">
+              <h2>Xác nhận thanh toán</h2>
+              <button className="modal-close" onClick={() => setShowPaymentModal(false)}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="payment-modal-body">
+              {paymentMethods.length > 0 ? (
+                <>
+                  <div className="payment-methods">
+                    <h3>Chọn phương thức thanh toán:</h3>
+                    {paymentMethods.map((method) => (
+                      <div
+                        key={method.paymentMethodId}
+                        className={`payment-method-item ${selectedPaymentMethod?.paymentMethodId === method.paymentMethodId ? 'selected' : ''}`}
+                        onClick={() => setSelectedPaymentMethod(method)}
+                      >
+                        <div className="payment-method-radio">
+                          <div className={`radio-inner ${selectedPaymentMethod?.paymentMethodId === method.paymentMethodId ? 'active' : ''}`}></div>
+                        </div>
+                        <div className="payment-method-name">{method.paymentMethodName}</div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="payment-details">
+                    <div className="payment-info-row">
+                      <span className="payment-label">Mã đặt sân:</span>
+                      <span className="payment-value">{booking?.id}</span>
+                    </div>
+                    <div className="payment-info-row">
+                      <span className="payment-label">Tên sân:</span>
+                      <span className="payment-value">{stadium?.stadiumName || 'Không có thông tin'}</span>
+                    </div>
+                    <div className="payment-info-row">
+                      <span className="payment-label">Ngày đặt:</span>
+                      <span className="payment-value">{formatDate(booking?.dateOfBooking)}</span>
+                    </div>
+                    <div className="payment-info-row">
+                      <span className="payment-label">Thời gian:</span>
+                      <span className="payment-value">{formatTime(booking?.startTime)} - {formatTime(booking?.endTime)}</span>
+                    </div>
+                    <div className="payment-info-row total">
+                      <span className="payment-label">Tổng tiền:</span>
+                      <span className="payment-value">{formatPrice(calculateTotalPrice())} VNĐ</span>
+                    </div>
+                  </div>
+                  
+                  {selectedPaymentMethod?.paymentMethodName.toLowerCase().includes('mặt') && (
+                    <div className="payment-note">
+                      <i className="fas fa-info-circle"></i>
+                      <span>Vui lòng thanh toán tại quầy trước khi sử dụng sân.</span>
+                    </div>
+                  )}
+                  
+                  <button 
+                    className="confirm-payment-button" 
+                    onClick={handleConfirmPayment}
+                    disabled={processingPayment || !selectedPaymentMethod}
+                  >
+                    {processingPayment ? 'Đang xử lý...' : 'Xác nhận đặt sân'}
+                  </button>
+                </>
+              ) : (
+                <div className="no-payment-methods">
+                  <p>Không tìm thấy phương thức thanh toán nào.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Hiển thị thông tin hóa đơn */}
+      {success && billInfo && (
+        <div className="bill-info-container booking-detail-page">
+          <div className="bill-info-card">
+            <div className="bill-info-header">
+              <h3>Thông tin hóa đơn</h3>
+              <button className="bill-close-button" onClick={() => setBillInfo(null)}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="bill-info-body">
+              <div className="bill-info-row">
+                <span className="bill-label">Mã hóa đơn:</span>
+                <span className="bill-value highlight">{billInfo.billId}</span>
+              </div>
+              <div className="bill-info-row">
+                <span className="bill-label">Phương thức thanh toán:</span>
+                <span className="bill-value">{selectedPaymentMethod?.paymentMethodName || 'Tiền mặt'}</span>
+              </div>
+              <div className="bill-info-row">
+                <span className="bill-label">Trạng thái thanh toán:</span>
+                <span className={`bill-value bill-status ${billInfo.status?.toLowerCase()}`}>
+                  {billInfo.status === 'PAID' ? 'Đã thanh toán' : 
+                  billInfo.status === 'UNPAID' ? 'Chưa thanh toán' : 
+                  'Đã hủy'}
+                </span>
+              </div>
+              <div className="bill-info-row">
+                <span className="bill-label">Tổng thanh toán:</span>
+                <span className="bill-value price">{formatPrice(billInfo.finalPrice)} VNĐ</span>
+              </div>
+              <div className="bill-info-row">
+                <span className="bill-label">Ngày tạo:</span>
+                <span className="bill-value">{new Date(billInfo.dateCreated).toLocaleString('vi-VN')}</span>
+              </div>
             </div>
           </div>
         </div>

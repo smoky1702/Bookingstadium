@@ -13,6 +13,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BillResponse {
+    @JsonProperty("bill_id")
+    private String billId;
+
     @JsonProperty("stadium_booking_id")
     private String stadiumBookingId;
 

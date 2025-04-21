@@ -8,6 +8,10 @@ import com.example.bookingStadium.dto.request.Users.UserUpdateRequest;
 import com.example.bookingStadium.dto.response.Users.UserResponse;
 import com.example.bookingStadium.entity.Users;
 import com.example.bookingStadium.service.UserService;
+import com.example.bookingStadium.dto.response.BillResponse;
+import com.example.bookingStadium.dto.response.BookingResponse;
+import com.example.bookingStadium.service.BillService;
+import com.example.bookingStadium.service.BookingService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +26,12 @@ import java.util.List;
 public class UserController {
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private BookingService bookingService;
+
+    @Autowired
+    private BillService billService;
 
     @PostMapping
     ApiResponse<Users> createUser(@RequestBody @Valid UserCreationRequest request){
@@ -92,6 +102,67 @@ public class UserController {
             , @RequestBody UserUpdateRoleRequest request){
         ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
         apiResponse.setResult(userService.updateRole(userId, request));
+        return apiResponse;
+    }
+    /**
+     * Lấy danh sách đặt sân của người dùng
+     */
+    @GetMapping("/{userId}/bookings")
+    ApiResponse<List<BookingResponse>> getUserBookings(@PathVariable("userId") String userId) {
+        List<BookingResponse> bookings = bookingService.getUserBookings(userId);
+        ApiResponse<List<BookingResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(bookings);
+        return apiResponse;
+    }
+
+    /**
+     * Lấy danh sách hóa đơn của người dùng
+     */
+    @GetMapping("/{userId}/bills")
+    ApiResponse<List<BillResponse>> getUserBills(@PathVariable("userId") String userId) {
+        List<BillResponse> bills = billService.getUserBills(userId);
+        ApiResponse<List<BillResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(bills);
+        return apiResponse;
+    }
+
+    /**
+     * Lấy danh sách đặt sân của người dùng hiện tại
+     */
+    @GetMapping("/me/bookings")
+    ApiResponse<List<BookingResponse>> getCurrentUserBookings() {
+        // Lấy thông tin của người dùng hiện tại từ SecurityContext
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+
+        // Tìm user theo email
+        UserResponse user = userService.findUserByEmail(email);
+
+        // Lấy danh sách booking
+        List<BookingResponse> bookings = bookingService.getUserBookings(user.getUser_id());
+
+        ApiResponse<List<BookingResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(bookings);
+        return apiResponse;
+    }
+
+    /**
+     * Lấy danh sách hóa đơn của người dùng hiện tại
+     */
+    @GetMapping("/me/bills")
+    ApiResponse<List<BillResponse>> getCurrentUserBills() {
+        // Lấy thông tin của người dùng hiện tại từ SecurityContext
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+
+        // Tìm user theo email
+        UserResponse user = userService.findUserByEmail(email);
+
+        // Lấy danh sách bill
+        List<BillResponse> bills = billService.getUserBills(user.getUser_id());
+
+        ApiResponse<List<BillResponse>> apiResponse = new ApiResponse<>();
+        apiResponse.setResult(bills);
         return apiResponse;
     }
 }

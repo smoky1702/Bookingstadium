@@ -55,6 +55,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/users/me").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/users/{userId}").authenticated()
 
+                        // lịch sử đặt sân vs bill
+                        .requestMatchers(HttpMethod.GET, "/users/{userId}/bookings", "/users/{userId}/bills").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/users/me/bookings", "/users/me/bills").authenticated()
+
                         .requestMatchers(HttpMethod.GET, "/bill/{billId}").authenticated()
                         .requestMatchers(HttpMethod.POST,"/bill/user").hasAuthority("SCOPE_USER")
                         .requestMatchers(HttpMethod.PUT, "/bill/update/{billId}").hasAnyAuthority("SCOPE_USER", "SCOPE_OWNER")

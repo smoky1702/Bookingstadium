@@ -3,8 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import AuthContext from '../../context/AuthContext';
-import { userAPI, bookingAPI } from '../../services/apiService';
+import { userAPI, bookingAPI, billAPI, stadiumAPI, paymentMethodAPI, stadiumBookingDetailAPI } from '../../services/apiService';
 import '../UserProfilePage/UserProfilePage.css';
+import axios from 'axios';
 
 const UserProfilePage = () => {
   const { currentUser, isAuthenticated, logout, setUserInfo } = useContext(AuthContext);
@@ -33,27 +34,122 @@ const UserProfilePage = () => {
   
   // Booking history state
   const [bookingHistory, setBookingHistory] = useState([]);
+  const [bookingDetails, setBookingDetails] = useState({});
+  const [stadiums, setStadiums] = useState({});
+  
+  // Bill history state
+  const [billHistory, setBillHistory] = useState([]);
+  const [paymentMethods, setPaymentMethods] = useState({});
   
   // API đang lấy từ backend thông tin các trạng thái đặt sân
   const [bookingStatuses, setBookingStatuses] = useState({});
   
-  // Lấy cấu hình trạng thái đặt sân từ API
+  // Bill statuses
+  const [billStatuses, setBillStatuses] = useState({});
+  
+  // Thêm state để lưu locations
+  const [locations, setLocations] = useState({});
+  
+  // Lấy cấu hình trạng thái đặt sân và hóa đơn từ API
   useEffect(() => {
-    const getBookingStatuses = async () => {
+    const getStatuses = async () => {
       try {
         // Xác định trạng thái từ backend
         setBookingStatuses({
           PENDING: 'Đang chờ',
           CONFIRMED: 'Đã xác nhận',
-          COMPLETED: 'Hoàn thành', 
+          COMPLETED: 'Hoàn thành',  
+          CANCELLED: 'Đã hủy'
+        });
+        
+        setBillStatuses({
+          PAID: 'Đã thanh toán',
+          UNPAID: 'Chưa thanh toán',
           CANCELLED: 'Đã hủy'
         });
       } catch (error) {
-        //console.error('Lỗi khi lấy cấu hình trạng thái đặt sân:', error);
+        //console.error('Lỗi khi lấy cấu hình trạng thái:', error);
       }
     };
     
-    getBookingStatuses();
+    getStatuses();
+  }, []);
+  
+  // Lấy thông tin phương thức thanh toán
+  useEffect(() => {
+    const fetchPaymentMethods = async () => {
+      try {
+        const response = await paymentMethodAPI.getPaymentMethod();
+        
+        const methods = {};
+        if (response && response.data) {
+          const paymentMethodsData = response.data.result || response.data;
+          
+          if (Array.isArray(paymentMethodsData)) {
+            paymentMethodsData.forEach(method => {
+              methods[method.id || method.paymentMethodId] = method.name || method.paymentMethodName || '';
+            });
+          }
+        }
+        
+        setPaymentMethods(methods);
+      } catch (error) {
+        // Xử lý lỗi nhưng không log ra console
+      }
+    };
+    
+    fetchPaymentMethods();
+  }, []);
+  
+  // Lấy thông tin sân bóng
+  useEffect(() => {
+    const fetchStadiums = async () => {
+      try {
+        const response = await stadiumAPI.getStadiums();
+        if (response && response.data) {
+          const stadiumsData = {};
+          const stadiumsList = response.data.result || response.data;
+          
+          if (Array.isArray(stadiumsList)) {
+            stadiumsList.forEach(stadium => {
+              stadiumsData[stadium.stadiumId || stadium.id] = stadium;
+              if (stadium.locationId) {
+                stadiumsData[stadium.locationId] = stadium;
+              }
+            });
+          }
+          
+          setStadiums(stadiumsData);
+        }
+      } catch (error) {
+        // Xử lý lỗi nhưng không log ra console
+      }
+    };
+    
+    // Thêm API lấy thông tin địa điểm
+    const fetchLocations = async () => {
+      try {
+        const response = await axios.get('http://localhost:8080/location');
+        
+        const locationsData = {};
+        if (response && response.data) {
+          const locationsList = response.data.result || response.data;
+          
+          if (Array.isArray(locationsList)) {
+            locationsList.forEach(location => {
+              locationsData[location.locationId || location.id] = location;
+            });
+            
+            setLocations(locationsData);
+          }
+        }
+      } catch (error) {
+        // Xử lý lỗi nhưng không log ra console
+      }
+    };
+    
+    fetchStadiums();
+    fetchLocations();
   }, []);
   
   // Helper functions
@@ -62,7 +158,7 @@ const UserProfilePage = () => {
     
     try {
       const date = new Date(dateString);
-      if (isNaN(date.getTime())) return ''; // Trả về chuỗi rỗng nếu không hợp lệ
+      if (isNaN(date.getTime())) return '';
       
       return date.toLocaleDateString('vi-VN', {
         year: 'numeric',
@@ -70,7 +166,6 @@ const UserProfilePage = () => {
         day: '2-digit'
       });
     } catch (error) {
-      //console.error('Lỗi khi định dạng ngày:', error);
       return '';
     }
   };
@@ -80,7 +175,7 @@ const UserProfilePage = () => {
     
     try {
       const date = new Date(dateTimeString);
-      if (isNaN(date.getTime())) return ''; // Trả về chuỗi rỗng nếu không hợp lệ
+      if (isNaN(date.getTime())) return '';
       
       return date.toLocaleDateString('vi-VN', {
         year: 'numeric',
@@ -90,7 +185,6 @@ const UserProfilePage = () => {
         minute: '2-digit'
       });
     } catch (error) {
-      //console.error('Lỗi khi định dạng ngày giờ:', error);
       return '';
     }
   };
@@ -266,8 +360,6 @@ const UserProfilePage = () => {
     
     // Xử lý khi API thất bại - trích xuất thành hàm riêng để tái sử dụng
     const handleApiFailure = (error) => {
-      //console.error('Fallback to context data:', error);
-      
       if (error.response && error.response.status === 403) {
         setError('Bạn không có quyền xem thông tin người dùng');
       } else if (currentUser) {
@@ -304,27 +396,81 @@ const UserProfilePage = () => {
     if (currentUser?.user_id) {
       const fetchBookingHistory = async () => {
         try {
-          const response = await bookingAPI.getUserBookings(currentUser.user_id);
+          const response = await bookingAPI.getCurrentUserBookings();
           
           if (response && response.data) {
+            let bookings = [];
             if (response.data.result) {
-            setBookingHistory(response.data.result);
+              bookings = response.data.result;
             } else {
-              // Trường hợp API trả về data trực tiếp
-            setBookingHistory(Array.isArray(response.data) ? response.data : [response.data]);
+              bookings = Array.isArray(response.data) ? response.data : [response.data];
             }
+            
+            const processedBookings = bookings.map((booking, index) => {
+              return {
+                ...booking,
+                bookingId: booking.bookingId || booking.stadium_booking_id || booking.id || `booking-${index}`,
+                userId: booking.userId || booking.user_id,
+                locationId: booking.locationId || booking.location_id,
+                dateOfBooking: booking.dateOfBooking || booking.date_of_booking,
+                startTime: booking.startTime || booking.start_time,
+                endTime: booking.endTime || booking.end_time,
+                status: booking.status || '',
+                price: booking.price || booking.totalPrice || 0
+              };
+            });
+            
+            setBookingHistory(processedBookings);
           } else {
             setBookingHistory([]);
           }
         } catch (error) {
-          //console.error('Lỗi khi lấy lịch sử đặt sân:', error);
           setBookingHistory([]);
         }
       };
       
       fetchBookingHistory();
+      
+      // Lấy lịch sử hóa đơn của người dùng
+      const fetchBillHistory = async () => {
+        try {
+          const response = await billAPI.getCurrentUserBills();
+          
+          if (response && response.data) {
+            let bills = [];
+            if (response.data.result) {
+              bills = response.data.result;
+            } else {
+              bills = Array.isArray(response.data) ? response.data : [response.data];
+            }
+            
+            const processedBills = bills.map((bill, index) => {
+              return {
+                ...bill,
+                billId: bill.billId || bill.bill_id || `bill-${index}`,
+                stadiumBookingId: bill.stadiumBookingId || bill.stadium_booking_id,
+                paymentMethodId: bill.paymentMethodId || bill.payment_method_id || 1,
+                userId: bill.userId || bill.user_id,
+                finalPrice: bill.finalPrice || bill.final_price || 0,
+                status: bill.status || '',
+                dateCreated: bill.dateCreated || bill.date_created,
+                datePaid: bill.datePaid || bill.date_paid
+              };
+            });
+            
+            setBillHistory(processedBills);
+          } else {
+            setBillHistory([]);
+          }
+        } catch (error) {
+          setBillHistory([]);
+        }
+      };
+      
+      fetchBillHistory();
     } else {
       setBookingHistory([]);
+      setBillHistory([]);
     }
   }, [isAuthenticated, currentUser, navigate, setUserInfo]);
   
@@ -361,73 +507,52 @@ const UserProfilePage = () => {
   const handleProfileUpdate = (e) => {
     e.preventDefault();
     
-    // Validate password if user is updating it
     if (formData.password && formData.password !== formData.confirmPassword) {
       setUpdateError('Mật khẩu và xác nhận mật khẩu không khớp');
       return;
     }
     
     setLoading(true);
-      setUpdateError(null);
+    setUpdateError(null);
     
-    // Luôn gửi đầy đủ các trường, sử dụng giá trị hiện tại nếu không thay đổi
-      const updateData = {
+    const updateData = {
       email: userData.email,
-        firstname: formData.firstname,
-        lastname: formData.lastname,
-        phone: formData.phone,
-      // QUAN TRỌNG: Backend yêu cầu luôn có password trong request
-      password: formData.password && formData.password.trim() !== '' 
-        ? formData.password 
-        : 'qa1234' // Password mặc định khi không đổi
+      firstname: formData.firstname,
+      lastname: formData.lastname,
+      phone: formData.phone,
+      password: formData.password 
     };
     
-    // Kiểm tra và định dạng ngày sinh trước khi gửi
     if (formData.day_of_birth && formData.day_of_birth.trim() !== '') {
       try {
-        // Đảm bảo định dạng đúng YYYY-MM-DD
         const dateObj = new Date(formData.day_of_birth);
         const formattedDate = dateObj.toISOString().split('T')[0];
         updateData.day_of_birth = formattedDate;
       } catch (error) {
-        //console.error('Lỗi khi định dạng ngày:', error);
         updateData.day_of_birth = formData.day_of_birth.trim();
       }
     }
     
-    //console.log('Dữ liệu gửi đến API:', JSON.stringify(updateData));
-    
-    // Gọi API để cập nhật thông tin người dùng
     userAPI.updateUser(userData.user_id, updateData)
       .then(response => {
-        //console.log('Cập nhật thành công:', response.data);
         setUpdateSuccess(true);
         setUpdateError(null);
-        
-        // Thoát khỏi chế độ chỉnh sửa
-      setEditMode(false);
-      
-        // Làm mới dữ liệu người dùng từ API
+        setEditMode(false);
         refreshUserData();
       })
       .catch(error => {
-        //console.error('Lỗi khi cập nhật:', error);
-      if (error.response) {
-          //console.log('Error status:', error.response.status);
-          //console.log('Error data:', error.response.data);
-          
-          // Hiển thị thông báo lỗi chi tiết hơn
+        if (error.response) {
           if (error.response.data && error.response.data.message) {
             setUpdateError(error.response.data.message);
           } else if (error.response.data && error.response.data.error) {
             setUpdateError(error.response.data.error);
-      } else {
+          } else {
             setUpdateError('Lỗi ' + error.response.status + ': ' + 
               (error.response.statusText || 'Không thể cập nhật thông tin'));
-      }
+          }
         } else {
           setUpdateError('Không thể kết nối đến máy chủ. Vui lòng thử lại sau.');
-    }
+        }
         setUpdateSuccess(false);
       })
       .finally(() => {
@@ -437,7 +562,7 @@ const UserProfilePage = () => {
   
   const handleLogout = () => {
     logout();
-    navigate('/');
+    navigate('/Mi247');
   };
 
   const getUserRoleName = () => {
@@ -607,6 +732,14 @@ const UserProfilePage = () => {
                   >
                     <i className="fas fa-calendar-alt"></i>
                     <span>Lịch sử đặt sân</span>
+                  </button>
+                  
+                  <button 
+                    className={`menu-item ${activeTab === 'bills' ? 'active' : ''}`} 
+                    onClick={() => handleTabChange('bills')}
+                  >
+                    <i className="fas fa-file-invoice-dollar"></i>
+                    <span>Hóa đơn</span>
                   </button>
                 
                 <button className="menu-item logout" onClick={handleLogout}>
@@ -830,34 +963,73 @@ const UserProfilePage = () => {
                   
                       {bookingHistory.length > 0 ? (
                     <div className="booking-list">
-                      {bookingHistory.map(booking => (
-                        <div key={booking.booking_id} className="booking-card">
-                          <div className="booking-header">
-                            <div className="booking-id">Mã đặt sân: #{booking.booking_id}</div>
-                            <div className={`booking-status ${booking.status?.toLowerCase()}`}>
-                                  {bookingStatuses[booking.status] || booking.status}
+                      {bookingHistory.map((booking, index) => {
+                        const bookingId = booking.stadium_booking_id || booking.bookingId || booking.id || `booking-${index}`;
+                        
+                        const locationId = booking.locationId || booking.location_id;
+                        const locationData = locations[locationId] || {};
+                        
+                        // Tạo địa chỉ đầy đủ
+                        let fullAddress = locationData.address || '';
+                        if (locationData.city) {
+                          fullAddress += fullAddress ? `, ${locationData.city}` : locationData.city;
+                        }
+                        if (locationData.district) {
+                          fullAddress += fullAddress ? `, ${locationData.district}` : locationData.district;
+                        }
+                        if (locationData.province) {
+                          fullAddress += fullAddress ? `, ${locationData.province}` : locationData.province;
+                        }
+                        
+                        return (
+                          <div key={`booking-${index}`} className="booking-card">
+                            <div className="booking-header">
+                              <div className="booking-id">Mã đặt sân: #{bookingId}</div>
+                              <div className={`booking-status ${(booking.status || '').toLowerCase().replace(/\s+/g, '')}`}>
+                                {bookingStatuses[booking.status] || booking.status || 'Đang chờ'}
+                              </div>
+                            </div>
+                            
+                            <div className="booking-body">
+                              <div className="booking-detail">
+                                <i className="fas fa-tag"></i>
+                                <span>Mã booking: {bookingId}</span>
+                              </div>
+                              
+                              <div className="booking-detail">
+                                <i className="fas fa-database"></i>
+                                <span>Stadium Booking ID: {booking.stadium_booking_id || bookingId}</span>
+                              </div>
+                              
+                              <div className="booking-detail">
+                                <i className="fas fa-map-marker-alt"></i>
+                                <span>Sân: {locationData.locationName || locationData.name || ''}</span>
+                              </div>
+                              
+                              <div className="booking-detail">
+                                <i className="fas fa-map"></i>
+                                <span>Địa chỉ: {fullAddress}</span>
+                              </div>
+                              
+                              <div className="booking-detail">
+                                <i className="far fa-calendar-alt"></i>
+                                <span>Ngày: {formatDate(booking.dateOfBooking || booking.date_of_booking)}</span>
+                              </div>
+                              
+                              <div className="booking-detail">
+                                <i className="far fa-clock"></i>
+                                <span>Thời gian: {booking.startTime || booking.start_time} - {booking.endTime || booking.end_time}</span>
+                              </div>
+                            </div>
+                            
+                            <div className="booking-actions">
+                              <Link to={`/booking/${bookingId}`} className="view-detail-button">
+                                <i className="fas fa-info-circle"></i> Xem chi tiết
+                              </Link>
                             </div>
                           </div>
-                          <div className="booking-body">
-                            <div className="booking-detail">
-                              <i className="fas fa-map-marker-alt"></i>
-                                  <span>Sân: {booking.stadium_name || booking.stadiumName || ''}</span>
-                            </div>
-                            <div className="booking-detail">
-                              <i className="far fa-calendar-alt"></i>
-                                  <span>Ngày: {formatDateTime(booking.booking_date || booking.bookingDate)}</span>
-                            </div>
-                            <div className="booking-detail">
-                              <i className="far fa-clock"></i>
-                              <span>Thời gian: {booking.time_start || booking.timeStart} - {booking.time_end || booking.timeEnd}</span>
-                            </div>
-                            <div className="booking-detail">
-                              <i className="fas fa-money-bill-wave"></i>
-                              <span>Tổng tiền: {booking.total_price?.toLocaleString() || booking.totalPrice?.toLocaleString() || 0} VNĐ</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="no-bookings">
@@ -866,6 +1038,83 @@ const UserProfilePage = () => {
                       <Link to="/danh-sach-san" className="book-now-button">
                         Đặt sân ngay
                       </Link>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {activeTab === 'bills' && (
+                <div className="bills-tab">
+                  <div className="tab-header">
+                    <h2>Lịch sử hóa đơn</h2>
+                  </div>
+                  
+                  {billHistory.length > 0 ? (
+                    <div className="bill-list">
+                      {billHistory.map((bill, index) => {
+                        const billId = bill.bill_id || bill.billId || `bill-${index}`;
+                        
+                        return (
+                          <div key={`bill-${index}`} className="bill-card">
+                            <div className="bill-header">
+                              <div className="bill-id">Mã hóa đơn: #{billId}</div>
+                              <div className={`bill-status ${(bill.status || 'unpaid').toLowerCase().replace(/\s+/g, '')}`}>
+                                {billStatuses[bill.status] || bill.status}
+                              </div>
+                            </div>
+                            
+                            <div className="bill-body">
+                              <div className="bill-detail">
+                                <i className="fas fa-receipt"></i>
+                                <span><strong>Mã hóa đơn:</strong> {billId}</span>
+                              </div>
+                              
+                              <div className="bill-detail">
+                                <i className="fas fa-bookmark"></i>
+                                <span>Mã đặt sân: {bill.stadium_booking_id || bill.stadiumBookingId || ''}</span>
+                              </div>
+                              
+                              <div className="bill-detail">
+                                <i className="fas fa-calendar-check"></i>
+                                <span>Ngày tạo: {formatDateTime(bill.date_created || bill.dateCreated) || ''}</span>
+                              </div>
+                              
+                              <div className="bill-detail">
+                                <i className="fas fa-calendar-alt"></i>
+                                <span>Ngày thanh toán: {bill.status === 'PAID' || bill.status === 'paid' ? formatDateTime(bill.date_paid || bill.datePaid) : 'Chưa thanh toán'}</span>
+                              </div>
+                              
+                              <div className="bill-detail">
+                                <i className="fas fa-credit-card"></i>
+                                <span>Phương thức: {paymentMethods[bill.payment_method_id || bill.paymentMethodId] || ''}</span>
+                              </div>
+                              
+                              <div className="bill-detail">
+                                <i className="fas fa-money-bill-wave"></i>
+                                <span>Tổng tiền: {(bill.final_price || bill.finalPrice || 0).toLocaleString()} VNĐ</span>
+                              </div>
+                            </div>
+                            
+                            <div className="bill-actions">
+                              {(bill.stadium_booking_id || bill.stadiumBookingId) && (
+                                <Link to={`/booking/${bill.stadium_booking_id || bill.stadiumBookingId}`} className="view-detail-button">
+                                  <i className="fas fa-eye"></i> Xem đặt sân
+                                </Link>
+                              )}
+                              {(bill.status === 'UNPAID' || bill.status === 'unpaid' || !bill.status) && (
+                                <button className="pay-now-button">
+                                  <i className="fas fa-credit-card"></i> Thanh toán
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="no-bills">
+                      <i className="far fa-file-alt"></i>
+                      <p>Bạn chưa có hóa đơn nào.</p>
                     </div>
                   )}
                 </div>

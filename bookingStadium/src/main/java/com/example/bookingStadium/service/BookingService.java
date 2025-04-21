@@ -75,12 +75,9 @@ public class BookingService {
         }
         
         stadiumBookingMapper.updateBooking(booking, request);
-        
-        // Thêm xử lý đặc biệt cho trường status
         if (request.getStatus() != null) {
             booking.setStatus(request.getStatus());
         }
-        
         return stadiumBookingMapper.toBookingMapper(bookingRepository.save(booking));
     }
 
@@ -94,6 +91,23 @@ public class BookingService {
         }
         
         bookingRepository.deleteById(bookingId);
+    }
+    /**
+     * Lấy danh sách đặt sân user cụ thể
+     */
+    public List<BookingResponse> getUserBookings(String userId) {
+        // admin hoặc chính người dùng đó mới có quyền xem
+        if (!securityUtils.isAdmin() && !securityUtils.isCurrentUser(userId)) {
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+
+        // Lấy danh sách booking theo userId
+        List<Booking> bookings = bookingRepository.findByUserId(userId);
+
+        // Chuyển đổi sang DTO response
+        return bookings.stream()
+                .map(stadiumBookingMapper::toBookingMapper)
+                .toList();
     }
 }
 

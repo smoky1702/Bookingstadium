@@ -113,6 +113,23 @@ public class BillService {
         
         billRepository.deleteById(billId);
     }
+    /**
+     * Lấy danh sách hóa đơn user cụ thể
+     */
+    public List<BillResponse> getUserBills(String userId) {
+        // chỉ admin, owner hoặc chính người dùng đó mới có quyền xem
+        if (!securityUtils.isAdmin() && !securityUtils.isOwner() && !securityUtils.isCurrentUser(userId)) {
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+
+        // Lấy danh sách bill theo userId
+        List<Bill> bills = billRepository.findByUserId(userId);
+
+        // Chuyển đổi sang DTO response
+        return bills.stream()
+                .map(billMapper::toBillResponse)
+                .toList();
+    }
 }
 
 

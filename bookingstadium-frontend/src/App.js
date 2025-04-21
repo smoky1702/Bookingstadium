@@ -9,7 +9,6 @@ import StadiumListPage from './pages/StadiumListPage/StadiumListPage';
 import StadiumDetailPage from './pages/StadiumDetailPage/StadiumDetailPage';
 import UserProfilePage from './pages/UserProfilePage/UserProfilePage';
 import BookingDetailPage from './pages/BookingDetailPage/BookingDetailPage';
-import BillPage from './pages/BillPage/BillPage';
 import PrivacyPolicy from './landingpage/PrivacyPolicy';
 import RefundPolicy from './landingpage/RefundPolicy';
 import CustomerPolicy from './landingpage/CustomerPolicy';
@@ -22,7 +21,7 @@ function App() {
     <AuthProvider>
       <Router>
         <Routes>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/Mi247" element={<HomePage />} />
           <Route path="/chinh-sach" element={<PolicyPage />} />
           <Route path="/dieu-khoan" element={<TermsPage />} />
           <Route path="/gioi-thieu" element={<AboutPage />} />
@@ -30,7 +29,6 @@ function App() {
           <Route path="/san/:stadiumId" element={<StadiumDetailPage />} />
           <Route path="/profile" element={<UserProfilePage />} />
           <Route path="/booking/:bookingId" element={<BookingDetailPage />} />
-          <Route path="/bills" element={<BillPage />} />
           <Route path="/chinh-sach-bao-mat" element={<PrivacyPolicy />} />
           <Route path="/chinh-sach-huy-doi-tra" element={<RefundPolicy />} />
           <Route path="/chinh-sach-khach-hang" element={<CustomerPolicy />} />

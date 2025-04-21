@@ -328,7 +328,9 @@ const bookingAPI = {
   
   deleteBooking: (bookingId) => apiClient.delete(`/booking/${bookingId}`),
   
-  getUserBooking: (userId) => apiClient.get(`/user/${userId}`)
+  getUserBookings: (userId) => apiClient.get(`/users/${userId}/bookings`),
+  
+  getCurrentUserBookings: () => apiClient.get('/users/me/bookings')
 };
 
 // API cho booking detail
@@ -380,49 +382,19 @@ const stadiumBookingDetailAPI = {
 
 // API cho bill
 const billAPI = {
-  createBill: (billData) => {
-    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-    
-    return apiClient.post('/bill', billData, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-  },
+  createBill: (billData) => apiClient.post('/bill', billData),
   
-  createUserBill: (billData) => {
-    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-    
-    return apiClient.post('/bill/user', billData, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-  },
-  
-  createOwnerBill: (billData) => {
-    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-    
-    return apiClient.post('/bill/owner', billData, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-  },
-  
-  getBills: () => {
-    return apiClient.get('/bill');
-  },
-  
-  getBill: function() { return this.getBills(); },
+  getBill: () => apiClient.get('/bill'),
   
   getBillById: (billId) => apiClient.get(`/bill/${billId}`),
   
-  updateBill: (billId, billData) => apiClient.put(`/bill/update/${billId}`, billData),
+  updateBill: (billId, billData) => apiClient.put(`/bill/${billId}`, billData),
   
-  paidBill: (billId, billData) => apiClient.put(`/bill/paid/${billId}`, billData),
+  deleteBill: (billId) => apiClient.delete(`/bill/${billId}`),
   
-  deleteBill: (billId) => apiClient.delete(`/bill/${billId}`)
+  getUserBills: (userId) => apiClient.get(`/users/${userId}/bills`),
+  
+  getCurrentUserBills: () => apiClient.get('/users/me/bills')
 };
 
 // API cho đánh giá

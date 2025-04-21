@@ -129,7 +129,7 @@ const Navbar = () => {
     
       <nav className="navbar">
         <div className="container navbar-container">
-          <Link to="/" onClick={(e) => handleNavLinkClick(e, "/")} className="navbar-logo">
+          <Link to="/Mi247" onClick={(e) => handleNavLinkClick(e, "/Mi247")} className="navbar-logo">
             <img src="/logo.png" alt="Mi24/7 Logo" />
           </Link>
 
@@ -140,9 +140,9 @@ const Navbar = () => {
           <ul className={`navbar-menu ${isMenuOpen ? 'active' : ''}`}>
             <li className="navbar-item">
               <Link 
-                to="/" 
-                className={location.pathname === '/' ? "navbar-link active" : "navbar-link"}
-                onClick={(e) => handleNavLinkClick(e, "/")}
+                to="/Mi247" 
+                className={location.pathname === '/Mi247' ? "navbar-link active" : "navbar-link"}
+                onClick={(e) => handleNavLinkClick(e, "/Mi247")}
               >
                 Trang chủ
               </Link>
@@ -219,12 +219,12 @@ const Navbar = () => {
                     <Link to="/profile" className="dropdown-item" onClick={() => setShowUserDropdown(false)}>
                       <i className="fas fa-user"></i> Tài khoản
                     </Link>
-                    <Link to="/bookings" className="dropdown-item" onClick={() => setShowUserDropdown(false)}>
+                    {/* <Link to="/bookings" className="dropdown-item" onClick={() => setShowUserDropdown(false)}>
                       <i className="fas fa-calendar-alt"></i> Lịch đặt sân
                     </Link>
                     <Link to="/bills" className="dropdown-item" onClick={() => setShowUserDropdown(false)}>
                       <i className="fas fa-file-invoice-dollar"></i> Hóa đơn
-                    </Link>
+                    </Link> */}
                     <div className="dropdown-divider"></div>
                     <div className="dropdown-item logout" onClick={handleLogout}>
                       <i className="fas fa-sign-out-alt"></i> Đăng xuất
