@@ -475,7 +475,7 @@ const BookingDetailPage = () => {
         final_price: calculateTotalPrice() || 0
       };
       
-      const billResponse = await billAPI.createUserBill(billData);
+      const billResponse = await billAPI.createBill(billData);
       
       if (!billResponse.data || !billResponse.data.result) {
         throw new Error('Không thể tạo hóa đơn');

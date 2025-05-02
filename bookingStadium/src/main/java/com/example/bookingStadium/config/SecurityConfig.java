@@ -65,7 +65,7 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.GET, "/bill/{billId}").authenticated() //Chỉnh sửa service
                         .requestMatchers(HttpMethod.POST,"/bill").hasAnyAuthority("SCOPE_USER")
-                        .requestMatchers(HttpMethod.PUT, "/bill/update/{billId}").hasAnyAuthority("SCOPE_USER")
+                        //.requestMatchers(HttpMethod.PUT, "/bill/update/{billId}").hasAnyAuthority("SCOPE_USER")
 
                         // API ADMIN
                         .requestMatchers(HttpMethod.GET, "/users").hasAuthority("SCOPE_ADMIN")
@@ -99,7 +99,7 @@ public class SecurityConfig {
                         // EVALUATION
                         .requestMatchers(HttpMethod.POST, "/evaluation").hasAuthority("SCOPE_USER")
                         .requestMatchers(HttpMethod.PUT, "/evaluation/{evaluationId}").hasAuthority("SCOPE_USER")
-                        .requestMatchers(HttpMethod.DELETE, "/evaluation/{evaluationId}").hasAuthority("SCOPE_USER")
+                        .requestMatchers(HttpMethod.DELETE, "/evaluation/{evaluationId}").hasAuthority("SCOPE_ADMIN")
 
                         .anyRequest().authenticated()
         );

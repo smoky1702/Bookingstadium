@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import HomePage from './pages/HomePage/HomePage';
@@ -16,12 +16,28 @@ import PaymentPolicy from './landingpage/PaymentPolicy';
 import UserGuide from './landingpage/UserGuide';
 import './App.css';
 
+// Lazy load Admin routes
+const AdminRoutes = lazy(() => import('./admin/AdminRoutes'));
+
 function App() {
+  // Loading component cho Suspense
+  const loading = (
+    <div style={{ 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'center', 
+      height: '100vh' 
+    }}>
+      Đang tải...
+    </div>
+  );
+
   return (
     <AuthProvider>
       <Router>
         <Routes>
-          <Route path="/Mi247" element={<HomePage />} />
+          {/* User routes */}
+          <Route path="/" element={<HomePage />} />
           <Route path="/chinh-sach" element={<PolicyPage />} />
           <Route path="/dieu-khoan" element={<TermsPage />} />
           <Route path="/gioi-thieu" element={<AboutPage />} />
@@ -34,6 +50,13 @@ function App() {
           <Route path="/chinh-sach-khach-hang" element={<CustomerPolicy />} />
           <Route path="/chinh-sach-thanh-toan" element={<PaymentPolicy />} />
           <Route path="/huong-dan" element={<UserGuide />} />
+          
+          {/* Admin routes */}
+          <Route path="/admin/*" element={
+            <Suspense fallback={loading}>
+              <AdminRoutes />
+            </Suspense>
+          } />
         </Routes>
       </Router>
     </AuthProvider>

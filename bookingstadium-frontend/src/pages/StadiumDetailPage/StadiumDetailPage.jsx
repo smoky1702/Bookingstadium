@@ -971,6 +971,8 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
         return 'ĐANG CHỜ';
       case 'CONFIRMED':
         return 'ĐÃ XÁC NHẬN';
+      case 'COMPLETED':
+        return 'ĐÃ HOÀN THÀNH';
       case 'CANCELLED':
         return 'ĐÃ HỦY';
       default:

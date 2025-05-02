@@ -77,7 +77,7 @@ public class EvaluationService {
         return evaluationMapper.toEvaluationResponse(evaluationRepository.save(evaluation));
     }
 
-    @PreAuthorize("hasAuthority('SCOPE_USER')")
+    @PreAuthorize("hasAnyAuthority('SCOPE_ADMIN', 'SCOPE_USER')")
     public void deleteEvaluation(String evaluationId){
         Evaluation evaluation = evaluationRepository.findById(evaluationId)
                 .orElseThrow(() -> new AppException(ErrorCode.EVALUATION_NOT_EXISTED));

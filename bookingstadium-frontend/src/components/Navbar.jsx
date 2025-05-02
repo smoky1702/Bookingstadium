@@ -129,7 +129,7 @@ const Navbar = () => {
     
       <nav className="navbar">
         <div className="container navbar-container">
-          <Link to="/Mi247" onClick={(e) => handleNavLinkClick(e, "/Mi247")} className="navbar-logo">
+          <Link to="/" onClick={(e) => handleNavLinkClick(e, "/")} className="navbar-logo">
             <img src="/logo.png" alt="Mi24/7 Logo" />
           </Link>
 
@@ -140,9 +140,9 @@ const Navbar = () => {
           <ul className={`navbar-menu ${isMenuOpen ? 'active' : ''}`}>
             <li className="navbar-item">
               <Link 
-                to="/Mi247" 
-                className={location.pathname === '/Mi247' ? "navbar-link active" : "navbar-link"}
-                onClick={(e) => handleNavLinkClick(e, "/Mi247")}
+                to="/" 
+                className={location.pathname === '/' ? "navbar-link active" : "navbar-link"}
+                onClick={(e) => handleNavLinkClick(e, "/")}
               >
                 Trang chủ
               </Link>

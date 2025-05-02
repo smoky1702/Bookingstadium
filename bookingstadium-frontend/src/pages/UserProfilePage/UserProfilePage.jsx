@@ -584,7 +584,7 @@ const UserProfilePage = () => {
   
   const handleLogout = () => {
     logout();
-    navigate('/Mi247');
+    navigate('/');
   };
 
   const getUserRoleName = () => {
