@@ -23,15 +23,18 @@ public class Stadium_Location {
     @Column(name = "address")
     private String address;
 
-    @Column(name = "city")
-    private String city;
+    @Column(name = "ward")
+    private String ward;
 
     @Column(name = "district")
     private String district;
 
-    @Column(name = "longitude")
-    private Double longitude;
+    @Column(name = "city")
+    private String city;
 
     @Column(name = "latitude")
     private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
 }

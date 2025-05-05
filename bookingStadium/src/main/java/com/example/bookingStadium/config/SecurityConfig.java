@@ -65,7 +65,7 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.GET, "/bill/{billId}").authenticated() //Chỉnh sửa service
                         .requestMatchers(HttpMethod.POST,"/bill").hasAnyAuthority("SCOPE_USER")
-                        //.requestMatchers(HttpMethod.PUT, "/bill/update/{billId}").hasAnyAuthority("SCOPE_USER")
+                       // .requestMatchers(HttpMethod.PUT, "/bill/update/{billId}").hasAnyAuthority("SCOPE_USER")
 
                         // API ADMIN
                         .requestMatchers(HttpMethod.GET, "/users").hasAuthority("SCOPE_ADMIN")

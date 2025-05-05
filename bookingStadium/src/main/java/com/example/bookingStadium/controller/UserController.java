@@ -165,6 +165,15 @@ public class UserController {
         apiResponse.setResult(bills);
         return apiResponse;
     }
+
+    @DeleteMapping("/owner/{userId}")
+    ApiResponse<String> deleteOwnerAndLocation(@PathVariable("userId") String userId){
+        userService.deleteOwnerAndLocation(userId);
+        return ApiResponse.<String>builder()
+                .result("Owner and stadium location has been deleted")
+                .build();
+    }
+
 }
 
 

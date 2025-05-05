@@ -18,9 +18,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Lớp này chịu trách nhiệm tự động cập nhật trạng thái booking dựa trên thời gian
- */
+//tự động cập nhật status booking dựa trên thời gian
 @Component
 @Slf4j
 public class BookingScheduler {
@@ -31,13 +29,8 @@ public class BookingScheduler {
     @Autowired
     private NotificationService notificationService;
 
-    /**
-     * Cập nhật trạng thái booking:
-     * 1. CONFIRMED -> COMPLETED: khi đã qua thời gian kết thúc
-     * 2. PENDING -> CANCELLED: khi đã quá 15 phút từ thời gian bắt đầu
-     * 
-     * Chạy mỗi 5 phút
-     */
+//     CONFIRMED -> COMPLETED: khi đã qua thời gian kết thúc
+//     PENDING -> CANCELLED: khi đã quá 15 phút từ thời gian bắt đầu
     @Scheduled(fixedRate = 300000) // 5 phút = 300,000ms
     @Transactional
     public void updateBookingStatuses() {
@@ -58,9 +51,8 @@ public class BookingScheduler {
         cancelExpiredPendingBookings(currentDate, now);
     }
     
-    /**
-     * Cập nhật các booking từ CONFIRMED sang COMPLETED
-     */
+    //CONFIRMED sang COMPLETED
+
     private void updateCompletedBookings(LocalDate currentDate, Time currentTime) {
         List<Booking> confirmedBookings = bookingRepository.findBookingsToComplete(
                 BookingStatus.CONFIRMED, currentDate, currentTime);

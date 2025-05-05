@@ -9,23 +9,50 @@ import com.example.bookingStadium.exception.AppException;
 import com.example.bookingStadium.exception.ErrorCode;
 import com.example.bookingStadium.mapper.StadiumLocationMapper;
 import com.example.bookingStadium.repository.StadiumLocationRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
+@Slf4j
 @Service
 public class StadiumLocationService {
     @Autowired
     private StadiumLocationRepository stadiumLocationRepository;
     @Autowired
     private StadiumLocationMapper stadiumLocationMapper;
+    @Autowired
+    private GoongMapService goongMapService;
+
 
     public Stadium_Location createLocation(StadiumLocationCreationRequest request){
         if(stadiumLocationRepository.existsByLocationName(request.getLocationName())){
             throw new AppException(ErrorCode.STADIUM_LOCATION_EXISTED);
         }
+
+        // Ghép địa chỉ đầy đủ để gọi Goong API
+        String fullAddress = String.format("%s, %s, %s, %s",
+                request.getAddress(),
+                request.getWard(),
+                request.getDistrict(),
+                request.getCity());
+
+        log.info("Calling Goong API with address: {}", fullAddress);
+
+        // Gọi Goong API để lấy tọa độ
+        Optional<GoongMapService.LatLng> coordinates = goongMapService.getCoordinates(fullAddress);
+
         Stadium_Location stadiumLocation = stadiumLocationMapper.toStadiumLocation(request);
+        stadiumLocation.setWard(request.getWard());
+
+        // Nếu lấy được tọa độ, set vào entity
+        coordinates.ifPresent(coord -> {
+            stadiumLocation.setLatitude(coord.getLatitude());
+            stadiumLocation.setLongitude(coord.getLongitude());
+            log.debug("Coordinates found: lat={}, lng={}", coord.getLatitude(), coord.getLongitude());
+        });
         return stadiumLocationRepository.save(stadiumLocation);
     }
 

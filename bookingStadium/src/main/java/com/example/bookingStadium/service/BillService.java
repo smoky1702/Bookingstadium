@@ -1,6 +1,7 @@
 package com.example.bookingStadium.service;
 
 
+import com.example.bookingStadium.Security.SecurityUtils;
 import com.example.bookingStadium.dto.request.Bill.BillCreationRequest;
 import com.example.bookingStadium.dto.request.Bill.BillPaidRequest;
 import com.example.bookingStadium.dto.request.Bill.BillUpdateRequest;
@@ -113,9 +114,7 @@ public class BillService {
         
         billRepository.deleteById(billId);
     }
-    /**
-     * Lấy danh sách hóa đơn user cụ thể
-     */
+     /* Lấy danh sách hóa đơn user cụ thể*/
     public List<BillResponse> getUserBills(String userId) {
         // chỉ admin, owner hoặc chính người dùng đó mới có quyền xem
         if (!securityUtils.isAdmin() && !securityUtils.isOwner() && !securityUtils.isCurrentUser(userId)) {

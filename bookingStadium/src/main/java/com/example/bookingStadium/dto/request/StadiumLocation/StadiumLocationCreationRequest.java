@@ -15,9 +15,12 @@ public class StadiumLocationCreationRequest {
     @JsonProperty( "address")
     private String address;
 
-    @JsonProperty("city")
-    private String city;
+    @JsonProperty("ward")
+    private String ward;
 
     @JsonProperty("district")
     private String district;
+
+    @JsonProperty("city")
+    private String city;
 }

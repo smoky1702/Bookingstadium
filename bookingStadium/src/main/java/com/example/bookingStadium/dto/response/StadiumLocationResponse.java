@@ -21,9 +21,18 @@ public class StadiumLocationResponse {
     @JsonProperty( "address")
     private String address;
 
-    @JsonProperty("city")
-    private String city;
+    @JsonProperty("ward")
+    private String ward;
 
     @JsonProperty("district")
     private String district;
+
+    @JsonProperty("city")
+    private String city;
+
+    @JsonProperty("latitude")
+    private Double latitude;
+
+    @JsonProperty("longitude")
+    private Double longitude;
 }

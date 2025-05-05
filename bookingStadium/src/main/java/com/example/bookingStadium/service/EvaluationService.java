@@ -1,6 +1,7 @@
 package com.example.bookingStadium.service;
 
 
+import com.example.bookingStadium.Security.SecurityUtils;
 import com.example.bookingStadium.dto.request.Evaluation.EvaluationCreationRequest;
 import com.example.bookingStadium.dto.request.Evaluation.EvaluationUpdateRequest;
 import com.example.bookingStadium.dto.response.EvaluationResponse;
@@ -75,7 +76,7 @@ public class EvaluationService {
         
         evaluationMapper.updateEvaluation(evaluation, request);
         return evaluationMapper.toEvaluationResponse(evaluationRepository.save(evaluation));
-    }
+    }   
 
     @PreAuthorize("hasAnyAuthority('SCOPE_ADMIN', 'SCOPE_USER')")
     public void deleteEvaluation(String evaluationId){

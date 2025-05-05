@@ -1,15 +1,18 @@
 package com.example.bookingStadium.service;
 
+import com.example.bookingStadium.Security.SecurityUtils;
 import com.example.bookingStadium.dto.request.Users.UserCreationRequest;
 import com.example.bookingStadium.dto.request.Users.UserUpdateRequest;
 import com.example.bookingStadium.dto.request.Users.UserUpdateRoleRequest;
 import com.example.bookingStadium.dto.response.Users.UserResponse;
 import com.example.bookingStadium.entity.Roles;
+import com.example.bookingStadium.entity.Stadium_Location;
 import com.example.bookingStadium.entity.Users;
 import com.example.bookingStadium.exception.AppException;
 import com.example.bookingStadium.exception.ErrorCode;
 import com.example.bookingStadium.mapper.UserMapper;
 import com.example.bookingStadium.repository.RoleRepository;
+import com.example.bookingStadium.repository.StadiumLocationRepository;
 import com.example.bookingStadium.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,9 +38,8 @@ public class UserService {
     private RoleRepository roleRepository;
     @Autowired
     private EmailService emailService;
-
     @Autowired
-    private SecurityUtils securityUtils;
+    private StadiumLocationRepository stadiumLocationRepository;
 
 
     public Users createUser(UserCreationRequest request){
@@ -151,5 +153,16 @@ public class UserService {
         response.setUser_id(user.getUser_id());
         
         return response;
+    }
+
+
+    //Còn lỗi
+    @PreAuthorize("hasAuthority('SCOPE_ADMIN')")
+    public void deleteOwnerAndLocation(String userId){
+        userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        stadiumLocationRepository.deleteByUserId(userId);
+
+        userRepository.deleteById(userId);
     }
 }
