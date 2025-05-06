@@ -10,6 +10,6 @@ public class MomoConfig {
 //    public static final String REDIRECT_URL = "http://localhost:8080/api/momo/redirect";
 //    public static final String IPN_URL = "http://localhost:8080/api/momo/ipn";
 
-    public static final String REDIRECT_URL = "https://2650-14-169-137-85.ngrok-free.app/api/momo/redirect";
+    public static final String REDIRECT_URL = "http://localhost:3000/payment/return";
     public static final String IPN_URL = "https://2650-14-169-137-85.ngrok-free.app/api/momo/ipn";
 }

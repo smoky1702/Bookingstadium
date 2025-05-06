@@ -53,6 +53,10 @@ const BookingManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
+  // Thêm state cho sắp xếp
+  const [sortField, setSortField] = useState('dateCreated');
+  const [sortDirection, setSortDirection] = useState('desc'); // 'asc' hoặc 'desc'
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -391,6 +395,66 @@ const BookingManagement = () => {
     }
   };
 
+  // Lấy tên trường hiển thị cho việc sắp xếp
+  const getSortFieldName = (field) => {
+    switch (field) {
+      case 'bookingId':
+        return 'ID';
+      case 'userId':
+        return 'Người đặt';
+      case 'stadiumId':
+        return 'Tên sân';
+      case 'dateOfBooking':
+        return 'Ngày đặt';
+      case 'dateCreated':
+        return 'Ngày tạo';
+      case 'startTime':
+        return 'Thời gian sử dụng';
+      case 'totalPrice':
+        return 'Giá tiền';
+      case 'status':
+        return 'Trạng thái';
+      default:
+        return field;
+    }
+  };
+
+  // Lấy biểu tượng sắp xếp
+  const getSortIcon = (field) => {
+    if (field !== sortField) return null;
+    
+    return (
+      <span className={`ms-1 text-${sortDirection === 'asc' ? 'primary' : 'danger'}`}>
+        {sortDirection === 'asc' ? '▲' : '▼'}
+      </span>
+    );
+  };
+
+  // Lấy kiểu cho header sắp xếp
+  const getSortHeaderStyle = (field) => {
+    return { 
+      cursor: 'pointer',
+      backgroundColor: sortField === field ? '#f8f9fa' : 'inherit',
+      transition: 'background-color 0.2s',
+      userSelect: 'none'
+    };
+  };
+
+  // Hàm sắp xếp dữ liệu
+  const handleSort = (field) => {
+    // Nếu click vào field đang sắp xếp, đảo ngược hướng sắp xếp
+    if (field === sortField) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Nếu click vào field mới, đặt field đó làm sortField và hướng sắp xếp là desc
+      setSortField(field);
+      setSortDirection('desc');
+    }
+    
+    // Reset về trang đầu tiên khi thay đổi sắp xếp
+    setCurrentPage(1);
+  };
+
   // Lọc đặt sân theo trạng thái
   const filteredBookings = bookings.filter(booking => {
     if (filterStatus === 'ALL') return true;
@@ -408,11 +472,62 @@ const BookingManagement = () => {
     );
   });
   
+  // Sắp xếp dữ liệu sau khi lọc
+  const sortedBookings = [...filteredBookings].sort((a, b) => {
+    let aValue, bValue;
+    
+    // Xác định giá trị để sắp xếp dựa vào field
+    switch (sortField) {
+      case 'bookingId':
+        aValue = a.bookingId || '';
+        bValue = b.bookingId || '';
+        break;
+      case 'userId':
+        aValue = getUserName(a.userId).toLowerCase();
+        bValue = getUserName(b.userId).toLowerCase();
+        break;
+      case 'stadiumId':
+        aValue = getFullStadiumName(a).toLowerCase();
+        bValue = getFullStadiumName(b).toLowerCase();
+        break;
+      case 'dateOfBooking':
+        aValue = new Date(a.dateOfBooking || 0).getTime();
+        bValue = new Date(b.dateOfBooking || 0).getTime();
+        break;
+      case 'dateCreated':
+        aValue = new Date(a.dateCreated || 0).getTime();
+        bValue = new Date(b.dateCreated || 0).getTime();
+        break;
+      case 'startTime':
+        aValue = a.startTime || '';
+        bValue = b.startTime || '';
+        break;
+      case 'totalPrice':
+        aValue = Number(a.totalPrice || a.price || 0);
+        bValue = Number(b.totalPrice || b.price || 0);
+        break;
+      case 'status':
+        aValue = a.status || '';
+        bValue = b.status || '';
+        break;
+      default:
+        aValue = a[sortField] || '';
+        bValue = b[sortField] || '';
+    }
+    
+    // So sánh và sắp xếp
+    if (sortDirection === 'asc') {
+      return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+    } else {
+      return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
+    }
+  });
+  
   // Tính toán chỉ số cho phân trang
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentBookings = filteredBookings.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredBookings.length / itemsPerPage);
+  const currentBookings = sortedBookings.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(sortedBookings.length / itemsPerPage);
 
   // Xử lý thay đổi trang
   const handlePageChange = (page) => {
@@ -484,7 +599,14 @@ const BookingManagement = () => {
               <strong>Quản lý đặt sân</strong>
             </CCol>
             <CCol xs="auto">
-              <CButton color="primary" size="sm" onClick={fetchData}>
+              <CButton color="primary" size="sm" onClick={() => {
+                setSearchTerm('');
+                setFilterStatus('ALL');
+                setSortField('dateCreated');
+                setSortDirection('desc');
+                setCurrentPage(1);
+                fetchData();
+              }}>
                 Làm mới
               </CButton>
             </CCol>
@@ -541,6 +663,11 @@ const BookingManagement = () => {
                   <>Không có dữ liệu</>
                 )}
               </small>
+              {sortField && (
+                <small className="text-muted ms-3">
+                  Sắp xếp theo: {getSortFieldName(sortField)} ({sortDirection === 'asc' ? 'tăng dần' : 'giảm dần'})
+                </small>
+              )}
             </CCol>
           </CRow>
 
@@ -555,13 +682,48 @@ const BookingManagement = () => {
               <CTable hover responsive>
                 <CTableHead>
                   <CTableRow>
-                    <CTableHeaderCell>ID</CTableHeaderCell>
-                    <CTableHeaderCell>Người đặt</CTableHeaderCell>
-                    <CTableHeaderCell>Tên sân</CTableHeaderCell>
-                    <CTableHeaderCell>Ngày đặt</CTableHeaderCell>
-                    <CTableHeaderCell>Thời gian sử dụng</CTableHeaderCell>
-                    <CTableHeaderCell>Giá tiền</CTableHeaderCell>
-                    <CTableHeaderCell>Trạng thái</CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('bookingId')} 
+                      style={getSortHeaderStyle('bookingId')}
+                    >
+                      ID {getSortIcon('bookingId')}
+                    </CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('userId')} 
+                      style={getSortHeaderStyle('userId')}
+                    >
+                      Người đặt {getSortIcon('userId')}
+                    </CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('stadiumId')} 
+                      style={getSortHeaderStyle('stadiumId')}
+                    >
+                      Tên sân {getSortIcon('stadiumId')}
+                    </CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('dateOfBooking')} 
+                      style={getSortHeaderStyle('dateOfBooking')}
+                    >
+                      Ngày đặt {getSortIcon('dateOfBooking')}
+                    </CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('startTime')} 
+                      style={getSortHeaderStyle('startTime')}
+                    >
+                      Thời gian sử dụng {getSortIcon('startTime')}
+                    </CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('totalPrice')} 
+                      style={getSortHeaderStyle('totalPrice')}
+                    >
+                      Giá tiền {getSortIcon('totalPrice')}
+                    </CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('status')} 
+                      style={getSortHeaderStyle('status')}
+                    >
+                      Trạng thái {getSortIcon('status')}
+                    </CTableHeaderCell>
                     <CTableHeaderCell>Hành động</CTableHeaderCell>
                   </CTableRow>
                 </CTableHead>

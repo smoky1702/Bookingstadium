@@ -42,6 +42,9 @@ const EvaluationManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  // Thêm state cho sắp xếp
+  const [sortField, setSortField] = useState('createdAt');
+  const [sortDirection, setSortDirection] = useState('desc'); // 'asc' hoặc 'desc'
 
   // Lấy danh sách đánh giá
   const fetchEvaluations = async () => {
@@ -132,15 +135,17 @@ const EvaluationManagement = () => {
     if (!dateString) return 'N/A';
     try {
       const date = new Date(dateString);
+      // Kiểm tra nếu ngày không hợp lệ
+      if (isNaN(date.getTime())) return 'N/A';
+      
+      // Format ngày theo định dạng "DD-MM-YYYY"
       const day = String(date.getDate()).padStart(2, '0');
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const year = date.getFullYear();
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
       
-      return `${hours}:${minutes} - ${day}/${month}/${year}`;
+      return `${day}-${month}-${year}`;
     } catch (err) {
-      return dateString;
+      return 'N/A';
     }
   };
 
@@ -192,6 +197,62 @@ const EvaluationManagement = () => {
     return 'success';
   };
 
+  // Hàm sắp xếp dữ liệu
+  const handleSort = (field) => {
+    // Nếu click vào field đang sắp xếp, đảo ngược hướng sắp xếp
+    if (field === sortField) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Nếu click vào field mới, đặt field đó làm sortField và hướng sắp xếp là desc
+      setSortField(field);
+      setSortDirection('desc');
+    }
+    
+    // Reset về trang đầu tiên khi thay đổi sắp xếp
+    setCurrentPage(1);
+  };
+
+  // Lấy tên trường hiển thị cho việc sắp xếp
+  const getSortFieldName = (field) => {
+    switch (field) {
+      case 'id':
+        return 'ID';
+      case 'userId':
+        return 'Người dùng';
+      case 'stadiumId':
+        return 'Sân';
+      case 'rating':
+        return 'Điểm';
+      case 'comment':
+        return 'Nội dung';
+      case 'createdAt':
+        return 'Thời gian';
+      default:
+        return field;
+    }
+  };
+
+  // Lấy biểu tượng sắp xếp
+  const getSortIcon = (field) => {
+    if (field !== sortField) return null;
+    
+    return (
+      <span className={`ms-1 text-${sortDirection === 'asc' ? 'primary' : 'danger'}`}>
+        {sortDirection === 'asc' ? '▲' : '▼'}
+      </span>
+    );
+  };
+
+  // Lấy kiểu cho header sắp xếp
+  const getSortHeaderStyle = (field) => {
+    return { 
+      cursor: 'pointer',
+      backgroundColor: sortField === field ? '#f8f9fa' : 'inherit',
+      transition: 'background-color 0.2s',
+      userSelect: 'none'
+    };
+  };
+
   // Lọc dữ liệu theo từ khóa tìm kiếm
   const filteredEvaluations = evaluations.filter(evaluation => {
     if (!searchTerm) return true;
@@ -206,11 +267,54 @@ const EvaluationManagement = () => {
     );
   });
   
+  // Sắp xếp dữ liệu sau khi lọc
+  const sortedEvaluations = [...filteredEvaluations].sort((a, b) => {
+    let aValue, bValue;
+    
+    // Xác định giá trị để sắp xếp dựa vào field
+    switch (sortField) {
+      case 'id':
+        aValue = String(a.evaluationId || a.id || a.actualId || '').toLowerCase();
+        bValue = String(b.evaluationId || b.id || b.actualId || '').toLowerCase();
+        break;
+      case 'userId':
+        aValue = getUserName(a.userId || a.user_id).toLowerCase();
+        bValue = getUserName(b.userId || b.user_id).toLowerCase();
+        break;
+      case 'stadiumId':
+        aValue = getStadiumName(a.stadiumId || a.stadium_id).toLowerCase();
+        bValue = getStadiumName(b.stadiumId || b.stadium_id).toLowerCase();
+        break;
+      case 'rating':
+        aValue = Number(a.rating || a.ratingScore || a.rating_score || 0);
+        bValue = Number(b.rating || b.ratingScore || b.rating_score || 0);
+        break;
+      case 'comment':
+        aValue = String(a.comment || '').toLowerCase();
+        bValue = String(b.comment || '').toLowerCase();
+        break;
+      case 'createdAt':
+        aValue = new Date(a.createdAt || a.dateCreated || a.date_created || 0).getTime();
+        bValue = new Date(b.createdAt || b.dateCreated || b.date_created || 0).getTime();
+        break;
+      default:
+        aValue = a[sortField] || '';
+        bValue = b[sortField] || '';
+    }
+    
+    // So sánh và sắp xếp
+    if (sortDirection === 'asc') {
+      return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+    } else {
+      return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
+    }
+  });
+  
   // Tính toán chỉ số cho phân trang
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentEvaluations = filteredEvaluations.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredEvaluations.length / itemsPerPage);
+  const currentEvaluations = sortedEvaluations.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(sortedEvaluations.length / itemsPerPage);
 
   // Xử lý thay đổi trang
   const handlePageChange = (page) => {
@@ -341,11 +445,18 @@ const EvaluationManagement = () => {
                   <>Không có dữ liệu</>
                 )}
               </small>
+              {sortField && (
+                <small className="text-muted me-3">
+                  Sắp xếp theo: {getSortFieldName(sortField)} ({sortDirection === 'asc' ? 'tăng dần' : 'giảm dần'})
+                </small>
+              )}
               <CButton 
                 color="primary" 
                 size="sm" 
                 onClick={() => {
                   setSearchTerm('');
+                  setSortField('createdAt');
+                  setSortDirection('desc');
                   setCurrentPage(1);
                   fetchEvaluations();
                 }}
@@ -361,39 +472,104 @@ const EvaluationManagement = () => {
             </div>
           ) : (
             <>
-              <CTable hover responsive>
+              <CTable hover responsive style={{ tableLayout: 'fixed', width: '100%' }}>
                 <CTableHead>
                   <CTableRow>
-                    <CTableHeaderCell>ID</CTableHeaderCell>
-                    <CTableHeaderCell>Người dùng</CTableHeaderCell>
-                    <CTableHeaderCell>Sân</CTableHeaderCell>
-                    <CTableHeaderCell>Đánh giá</CTableHeaderCell>
-                    <CTableHeaderCell>Nội dung</CTableHeaderCell>
-                    <CTableHeaderCell>Thời gian</CTableHeaderCell>
-                    <CTableHeaderCell>Thao tác</CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('id')} 
+                      style={{
+                        ...getSortHeaderStyle('id'),
+                        width: '17%',
+                        // overflow: 'hidden'
+                      }}
+                    >
+                      ID {getSortIcon('id')}
+                    </CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('userId')} 
+                      style={{
+                        ...getSortHeaderStyle('userId'),
+                        width: '15%'
+                      }}
+                    >
+                      Người dùng {getSortIcon('userId')}
+                    </CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('stadiumId')} 
+                      style={{
+                        ...getSortHeaderStyle('stadiumId'),
+                        width: '15%'
+                      }}
+                    >
+                      Sân {getSortIcon('stadiumId')}
+                    </CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('rating')} 
+                      style={{
+                        ...getSortHeaderStyle('rating'),
+                        textAlign: 'center',
+                        width: '10%'
+                      }}
+                    >
+                      Điểm {getSortIcon('rating')}
+                    </CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('comment')} 
+                      style={{
+                        ...getSortHeaderStyle('comment'),
+                        width: '20%'
+                      }}
+                    >
+                      Nội dung {getSortIcon('comment')}
+                    </CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('createdAt')} 
+                      style={{
+                        ...getSortHeaderStyle('createdAt'),
+                        width: '15%'
+                      }}
+                    >
+                      Thời gian {getSortIcon('createdAt')}
+                    </CTableHeaderCell>
+                    <CTableHeaderCell style={{ width: '8%', textAlign: 'center' }}>
+                      Thao tác
+                    </CTableHeaderCell>
                   </CTableRow>
                 </CTableHead>
                 <CTableBody>
                   {currentEvaluations.length > 0 ? (
                     currentEvaluations.map((evaluation, index) => (
                       <CTableRow key={`eval-${evaluation.uniqueId || index}`}>
-                        <CTableDataCell>
-                          <small>{evaluation.evaluationId || evaluation.id || evaluation.actualId || 'N/A'}</small>
+                        <CTableDataCell style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {evaluation.evaluationId || evaluation.id || evaluation.actualId || 'N/A'}
                         </CTableDataCell>
-                        <CTableDataCell>{getUserName(evaluation.userId || evaluation.user_id)}</CTableDataCell>
-                        <CTableDataCell>{getStadiumName(evaluation.stadiumId || evaluation.stadium_id)}</CTableDataCell>
-                        <CTableDataCell>
-                          <CBadge color={getRatingBadgeColor(evaluation.rating || evaluation.ratingScore || evaluation.rating_score)}>
+                        <CTableDataCell style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {getUserName(evaluation.userId || evaluation.user_id)}
+                        </CTableDataCell>
+                        <CTableDataCell style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {getStadiumName(evaluation.stadiumId || evaluation.stadium_id)}
+                        </CTableDataCell>
+                        <CTableDataCell className="text-center">
+                          <CBadge 
+                            color={getRatingBadgeColor(evaluation.rating || evaluation.ratingScore || evaluation.rating_score)}
+                            style={{ 
+                              fontSize: '0.9rem', 
+                              padding: '5px 10px',
+                              minWidth: '40px'
+                            }}
+                          >
                             {evaluation.rating || evaluation.ratingScore || evaluation.rating_score || 'N/A'} ★
                           </CBadge>
                         </CTableDataCell>
                         <CTableDataCell>
-                          <div style={{ maxWidth: '350px', maxHeight: '100px', overflow: 'auto' }}>
+                          <div style={{ maxHeight: '80px', overflow: 'auto' }}>
                             {evaluation.comment || <span className="text-muted">Không có nội dung</span>}
                           </div>
                         </CTableDataCell>
-                        <CTableDataCell>{formatDateTime(evaluation.createdAt || evaluation.dateCreated || evaluation.date_created)}</CTableDataCell>
                         <CTableDataCell>
+                          {formatDateTime(evaluation.createdAt || evaluation.dateCreated || evaluation.date_created)}
+                        </CTableDataCell>
+                        <CTableDataCell className="text-center">
                           <CButton 
                             color="danger" 
                             size="sm"

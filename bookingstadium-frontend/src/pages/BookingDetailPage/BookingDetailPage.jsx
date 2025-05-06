@@ -3,7 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import AuthContext from '../../context/AuthContext';
-import { bookingAPI, stadiumBookingDetailAPI, stadiumAPI, locationAPI, typeAPI, evaluationAPI, imageAPI, paymentMethodAPI, billAPI } from '../../services/apiService';
+import { bookingAPI, stadiumBookingDetailAPI, stadiumAPI, locationAPI, typeAPI, evaluationAPI, imageAPI, paymentMethodAPI, billAPI, momoAPI } from '../../services/apiService';
 import '../BookingDetailPage/BookingDetailPage.css';
 
 const BookingDetailPage = () => {
@@ -38,6 +38,9 @@ const BookingDetailPage = () => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [billInfo, setBillInfo] = useState(null);
+  
+  // Thêm state redirectingToMomo sau các state khác
+  const [redirectingToMomo, setRedirectingToMomo] = useState(false);
   
   // Hàm tiện ích
   const formatDate = (dateString) => {
@@ -116,8 +119,14 @@ const BookingDetailPage = () => {
   
   // Hàm fetch dữ liệu
     const fetchData = async () => {
-      if (!isAuthenticated || !bookingId) {
+      if (!isAuthenticated) {
         navigate('/');
+        return;
+      }
+      
+      if (!bookingId || bookingId === 'undefined') {
+        setError('Không tìm thấy mã đặt sân hợp lệ.');
+        setLoading(false);
         return;
       }
       
@@ -137,7 +146,15 @@ const BookingDetailPage = () => {
       const bookingData = bookingResponse.data?.result || bookingResponse.data;
         
         if (!bookingData) {
-          throw new Error('Không tìm thấy dữ liệu booking');
+          setError('Không tìm thấy thông tin đặt sân.');
+          setLoadingState({
+            booking: false,
+            bookingDetail: false,
+            stadium: false,
+            location: false
+          });
+          setLoading(false);
+          return;
         }
         
       // Chuẩn hóa dữ liệu booking
@@ -497,21 +514,66 @@ const BookingDetailPage = () => {
         setBillInfo(billDetailResponse.data.result);
       }
       
-      // 4. Cập nhật giao diện người dùng
-      setBooking({
-        ...booking,
-        status: 'CONFIRMED'
-      });
+      // 4. Xử lý theo phương thức thanh toán
+      const isMomoPayment = selectedPaymentMethod.paymentMethodName.toLowerCase().includes('momo');
       
-      setProgressPercent(100); // Cập nhật thanh tiến trình lên 100%
-      setSuccess('Đặt sân thành công. Vui lòng thanh toán tại quầy trước khi sử dụng sân.');
-      setShowPaymentModal(false);
+      if (isMomoPayment) {
+        try {
+          setRedirectingToMomo(true); // Đánh dấu đang chuyển hướng đến MoMo
+          
+          // Gọi API tạo thanh toán MoMo
+          const momoResponse = await momoAPI.createPayment(billId);
+          
+          if (momoResponse.data && momoResponse.data.payUrl) {
+            // Cập nhật booking trước khi chuyển hướng
+            setBooking({
+              ...booking,
+              status: 'CONFIRMED'
+            });
+            
+            // Đóng modal thanh toán
+            setShowPaymentModal(false);
+            
+            // Chuyển hướng người dùng đến trang thanh toán MoMo
+            window.location.href = momoResponse.data.payUrl;
+            return; // Dừng xử lý tiếp theo vì đã chuyển hướng
+          } else {
+            throw new Error('Không nhận được URL thanh toán từ MoMo');
+          }
+        } catch (momoError) {
+          console.error('Lỗi khi tạo thanh toán MoMo:', momoError);
+          setError('Không thể khởi tạo thanh toán MoMo. Vui lòng thử lại sau.');
+          setRedirectingToMomo(false); // Reset trạng thái chuyển hướng
+        }
+      }
+      
+      // 5. Cập nhật giao diện người dùng (chỉ cho các phương thức thanh toán khác MoMo hoặc khi có lỗi với MoMo)
+      if (!redirectingToMomo) {
+        setBooking({
+          ...booking,
+          status: 'CONFIRMED'
+        });
+        
+        setProgressPercent(100); // Cập nhật thanh tiến trình lên 100%
+        
+        // Hiển thị thông báo phù hợp với phương thức thanh toán
+        if (isMomoPayment) {
+          setSuccess('Đã xảy ra lỗi khi chuyển hướng đến trang thanh toán MoMo. Vui lòng thử lại sau.');
+        } else {
+          setSuccess('Đặt sân thành công. Vui lòng thanh toán tại quầy trước khi sử dụng sân.');
+        }
+        
+        setShowPaymentModal(false);
+      }
       
     } catch (error) {
       console.error("Lỗi khi xử lý thanh toán:", error);
       setError('Không thể hoàn tất quá trình đặt sân. Vui lòng thử lại sau.');
+      setRedirectingToMomo(false); // Reset trạng thái chuyển hướng
     } finally {
-      setProcessingPayment(false);
+      if (!redirectingToMomo) {
+        setProcessingPayment(false);
+      }
     }
   };
   
@@ -621,14 +683,22 @@ const BookingDetailPage = () => {
             </div>
           ) : error ? (
             <div className="error-container">
+              <div className="error-icon">
+                <i className="fas fa-exclamation-triangle"></i>
+              </div>
               <div className="error-message">{error}</div>
-              <button 
-                className="retry-button" 
-                onClick={() => setRetrying(prev => !prev)}
-                disabled={loading}
-              >
-                {loading ? 'Đang thử lại...' : 'Thử lại'} <i className="fas fa-sync"></i>
-              </button>
+              <div className="error-actions">
+                <button 
+                  className="retry-button" 
+                  onClick={() => setRetrying(prev => !prev)}
+                  disabled={loading}
+                >
+                  {loading ? 'Đang thử lại...' : 'Thử lại'} <i className="fas fa-sync"></i>
+                </button>
+                <Link to="/profile" className="return-button">
+                  <i className="fas fa-user"></i> Về trang tài khoản
+                </Link>
+              </div>
             </div>
           ) : booking ? (
             <>
@@ -854,10 +924,19 @@ const BookingDetailPage = () => {
             </>
           ) : (
             <div className="not-found">
-              <p>Không tìm thấy thông tin đặt sân.</p>
-              <Link to="/profile" className="booking-action-button pay-button">
-                Quay lại tài khoản
-              </Link>
+              <div className="not-found-icon">
+                <i className="fas fa-search"></i>
+              </div>
+              <h3>Không tìm thấy thông tin đặt sân</h3>
+              <p>Thông tin đặt sân bạn đang tìm kiếm không tồn tại hoặc đã bị xóa.</p>
+              <div className="not-found-actions">
+                <Link to="/profile" className="booking-action-button return-button">
+                  <i className="fas fa-user"></i> Về trang tài khoản
+                </Link>
+                <Link to="/danh-sach-san" className="booking-action-button stadium-list-button">
+                  <i className="fas fa-futbol"></i> Xem danh sách sân
+                </Link>
+              </div>
             </div>
           )}
         </div>
@@ -970,10 +1049,17 @@ const BookingDetailPage = () => {
                     </div>
                   </div>
                   
-                  {selectedPaymentMethod?.paymentMethodName.toLowerCase().includes('mặt') && (
+                  {/* Hiển thị thông báo dựa vào phương thức thanh toán */}
+                  {selectedPaymentMethod && (
                     <div className="payment-note">
                       <i className="fas fa-info-circle"></i>
-                      <span>Vui lòng thanh toán tại quầy trước khi sử dụng sân.</span>
+                      {selectedPaymentMethod.paymentMethodName.toLowerCase().includes('mặt') ? (
+                        <span>Vui lòng thanh toán tại quầy trước khi sử dụng sân.</span>
+                      ) : selectedPaymentMethod.paymentMethodName.toLowerCase().includes('momo') ? (
+                        <span>Bạn sẽ được chuyển đến cổng thanh toán MoMo để hoàn tất giao dịch.</span>
+                      ) : (
+                        <span>Vui lòng hoàn tất thanh toán để xác nhận đặt sân.</span>
+                      )}
                     </div>
                   )}
                   

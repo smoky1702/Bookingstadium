@@ -31,6 +31,7 @@ import {
   cilX
 } from '@coreui/icons';
 import { locationAPI, userAPI, stadiumAPI } from '../services/adminApi';
+import GoongMap from '../../components/GoongMap/GoongMap';
 
 const LocationManagement = () => {
   const [locations, setLocations] = useState([]);
@@ -237,6 +238,16 @@ const LocationManagement = () => {
     return items;
   };
 
+  // Reset bản đồ khi đóng modal
+  const handleCloseModal = () => {
+    setShowViewModal(false);
+    // Đảm bảo rằng không có bản đồ nào ở chế độ toàn màn hình
+    const fullscreenOverlays = document.querySelectorAll('.fullscreen-overlay');
+    fullscreenOverlays.forEach(overlay => {
+      overlay.remove();
+    });
+  };
+
   if (error) {
     return (
       <CRow>
@@ -389,7 +400,7 @@ const LocationManagement = () => {
       {/* Modal xem chi tiết địa điểm */}
       <CModal 
         visible={showViewModal} 
-        onClose={() => setShowViewModal(false)} 
+        onClose={handleCloseModal} 
         size="lg"
         backdrop="static"
       >
@@ -457,9 +468,14 @@ const LocationManagement = () => {
                 <div>
                   <h5>Bản đồ</h5>
                   {selectedLocation.longitude && selectedLocation.latitude ? (
-                    <div style={{ height: '300px', backgroundColor: '#f8f9fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <p className="text-muted">Xem bản đồ tại tọa độ: {selectedLocation.longitude}, {selectedLocation.latitude}</p>
-                      {/* Chức năng xem bản đồ có thể thêm vào sau nếu có thêm thư viện Google Maps */}
+                    <div style={{ height: '300px', overflow: 'hidden', borderRadius: '8px', position: 'relative' }}>
+                      <GoongMap
+                        latitude={selectedLocation.latitude}
+                        longitude={selectedLocation.longitude}
+                        address={selectedLocation.address || `${selectedLocation.district || ''}, ${selectedLocation.city || ''}`}
+                        locationName={selectedLocation.locationName}
+                        height="300px"
+                      />
                     </div>
                   ) : (
                     <p>Không có thông tin tọa độ để hiển thị bản đồ</p>
@@ -470,7 +486,7 @@ const LocationManagement = () => {
           )}
         </CModalBody>
         <CModalFooter>
-          <CButton color="secondary" onClick={() => setShowViewModal(false)}>
+          <CButton color="secondary" onClick={handleCloseModal}>
             Đóng
           </CButton>
         </CModalFooter>

@@ -4,14 +4,17 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faStar, faMapMarkerAlt, faTag, faMoneyBillWave, faCheckCircle,
   faTimesCircle, faFutbol, faCalendarAlt, faUser, faCommentAlt,
-  faArrowLeft, faLocationArrow, faInfoCircle, faClock
+  faArrowLeft, faLocationArrow, faInfoCircle, faClock,
+  faBasketballBall, faVolleyballBall, faTableTennis, faPhone, faEnvelope, faHome
 } from '@fortawesome/free-solid-svg-icons';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import AuthContext from '../../context/AuthContext';
-import { stadiumAPI, locationAPI, typeAPI, imageAPI, bookingAPI, stadiumBookingDetailAPI, billAPI, evaluationAPI, userAPI, workScheduleAPI } from '../../services/apiService';
+import { stadiumAPI, locationAPI, typeAPI, imageAPI, bookingAPI, stadiumBookingDetailAPI, billAPI, evaluationAPI, userAPI, workScheduleAPI, goongMapAPI } from '../../services/apiService';
 import BookingConfirmModal from '../BookingConfirmModal/BookingConfirmModal';
+import GoongMap from '../../components/GoongMap/GoongMap';
 import '../StadiumDetailPage/StadiumDetailPage.css';
+import { getTypeIcon, getTypeColor, getTypeStyleSettings } from '../../utils/typeStyleUtils';
 
 // Cung cấp giá trị mặc định cho openLoginModal để tránh lỗi nếu không được truyền
 const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal not provided') }) => {
@@ -31,6 +34,36 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
   const [workSchedule, setWorkSchedule] = useState([]); // Lưu trữ lịch làm việc
   const [currentPage, setCurrentPage] = useState(1); // Thêm state cho trang hiện tại
   const evaluationsPerPage = 4; // Số đánh giá mỗi trang
+  const [mapCoordinates, setMapCoordinates] = useState(null); // Thêm state lưu tọa độ cho bản đồ
+  const [typeStyleSettings, setTypeStyleSettings] = useState({}); // State lưu cài đặt icon và màu sắc
+
+  // Thêm useEffect để lắng nghe thay đổi trong localStorage và cập nhật cài đặt
+  useEffect(() => {
+    // Hàm xử lý khi localStorage thay đổi từ tab khác
+    const handleStorageChange = () => {
+      setTypeStyleSettings(getTypeStyleSettings());
+    };
+    
+    // Hàm xử lý khi cài đặt thay đổi trong cùng tab
+    const handleSettingsChange = (event) => {
+      setTypeStyleSettings(event.detail.settings || getTypeStyleSettings());
+    };
+
+    // Đăng ký lắng nghe sự kiện storage (thay đổi từ tab khác)
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Đăng ký lắng nghe sự kiện tùy chỉnh (thay đổi từ cùng tab)
+    window.addEventListener('typeSettingsChanged', handleSettingsChange);
+    
+    // Đọc cài đặt lần đầu khi component mount
+    setTypeStyleSettings(getTypeStyleSettings());
+    
+    // Cleanup listener khi unmount
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('typeSettingsChanged', handleSettingsChange);
+    };
+  }, []);
 
   // Booking form data
   const [bookingData, setBookingData] = useState({
@@ -222,6 +255,124 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
     fetchWorkSchedule();
   }, [stadium, location]);
 
+  // Thêm useEffect để lấy tọa độ nếu location không có sẵn lat/lng
+  useEffect(() => {
+    const fetchCoordinates = async () => {
+      try {
+        // Nếu đã có tọa độ trong location
+        if (location && location.latitude && location.longitude) {
+          console.log('Đã có tọa độ trong dữ liệu location:', location.latitude, location.longitude);
+          setMapCoordinates({
+            latitude: parseFloat(location.latitude),
+            longitude: parseFloat(location.longitude)
+          });
+          return;
+        }
+        
+        // Nếu không có location hoặc không có tọa độ, thử lấy từ locationId
+        if (location && location.locationId) {
+          try {
+            console.log('Đang lấy tọa độ từ locationId:', location.locationId);
+            // Thử lấy trực tiếp từ backend theo locationId
+            const response = await locationAPI.getLocationById(location.locationId);
+            
+            if (response.data && (response.data.latitude || response.data.result?.latitude)) {
+              const locationData = response.data.result || response.data;
+              if (locationData.latitude && locationData.longitude) {
+                console.log('Đã lấy được tọa độ từ location API:', locationData);
+                setMapCoordinates({
+                  latitude: parseFloat(locationData.latitude),
+                  longitude: parseFloat(locationData.longitude)
+                });
+                return;
+              }
+            }
+          } catch (error) {
+            console.error('Lỗi khi lấy location theo ID:', error);
+          }
+        }
+        
+        // Nếu không có tọa độ, thử dùng geocoding với địa chỉ
+        const fullAddress = getFullAddress();
+        if (!fullAddress || fullAddress === "Đang cập nhật địa chỉ...") {
+          console.log('Không có địa chỉ để tìm tọa độ');
+          // Không set tọa độ mặc định - để mapCoordinates là null
+          return;
+        }
+        
+        console.log('Thử geocoding với địa chỉ:', fullAddress);
+        try {
+          const response = await goongMapAPI.geocode(fullAddress);
+          
+          if (response.data && response.data.results && response.data.results.length > 0) {
+            const result = response.data.results[0];
+            const coordinates = result.geometry?.location;
+            
+            if (coordinates && coordinates.lat && coordinates.lng) {
+              console.log('Đã lấy tọa độ từ geocoding:', coordinates);
+              setMapCoordinates({
+                latitude: coordinates.lat,
+                longitude: coordinates.lng
+              });
+              
+              // Nếu có location nhưng chưa có tọa độ, cố gắng cập nhật tọa độ lên server
+              if (location && location.locationId && (location.latitude === null || location.longitude === null)) {
+                try {
+                  console.log('Cập nhật tọa độ cho location:', location.locationId);
+                  await locationAPI.updateLocation(location.locationId, {
+                    ...location,
+                    latitude: coordinates.lat,
+                    longitude: coordinates.lng
+                  });
+                  console.log('Đã cập nhật tọa độ cho location');
+                } catch (updateError) {
+                  console.error('Lỗi khi cập nhật tọa độ cho location:', updateError);
+                }
+              }
+            } else {
+              console.log('Không tìm thấy tọa độ trong kết quả geocoding');
+              // Không set tọa độ mặc định
+            }
+          } else {
+            console.log('Không tìm thấy kết quả geocoding cho địa chỉ:', fullAddress);
+            // Không set tọa độ mặc định
+          }
+        } catch (geocodingError) {
+          console.error('Lỗi khi gọi geocoding API:', geocodingError);
+          // Không set tọa độ mặc định
+        }
+      } catch (error) {
+        console.error('Lỗi khi lấy tọa độ:', error);
+        // Không set tọa độ mặc định
+      }
+    };
+    
+    if (location || stadium?.locationId) {
+      fetchCoordinates();
+    }
+  }, [location, stadium]);
+
+  // Thêm hàm để lấy địa chỉ đơn giản hóa
+  const getSimplifiedAddress = () => {
+    if (!location) return "";
+    
+    // Chỉ lấy phần district và city cho địa chỉ đơn giản
+    const parts = [];
+    if (location.district) parts.push(location.district);
+    if (location.city) parts.push(location.city);
+    if (location.province) parts.push(location.province);
+    if (parts.length === 0 && location.address) {
+      // Nếu không có district/city, lấy phần cuối của địa chỉ
+      const addressParts = location.address.split(',');
+      if (addressParts.length > 1) {
+        return addressParts[addressParts.length - 1].trim();
+      }
+      return location.address;
+    }
+    
+    return parts.join(", ");
+  };
+
   // Hàm lấy tên loại sân
   const getTypeName = (typeObj) => {
     if (!typeObj) return "Không xác định";
@@ -231,12 +382,14 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
   // Hàm lấy địa chỉ đầy đủ
   const getFullAddress = () => {
     if (!location) return "Đang cập nhật địa chỉ...";
+    
     const parts = [];
     if (location.address) parts.push(location.address);
     if (location.ward) parts.push(location.ward);
     if (location.district) parts.push(location.district);
     if (location.city) parts.push(location.city);
-    if (location.province) parts.push(location.province);
+    if (location.province && location.province !== location.city) parts.push(location.province);
+    
     return parts.join(", ") || "Chưa có thông tin địa chỉ";
   };
 
@@ -744,9 +897,9 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
           if (detailResponse.data && detailResponse.data.result) {
             // Lấy ID của BookingDetail từ response - kiểm tra nhiều cách đặt tên trường
             const bookingDetailId = detailResponse.data.result.id || 
-                                   detailResponse.data.result.stadiumBookingDetailId || 
-                                   detailResponse.data.result.stadium_booking_detail_id || 
-                                   detailResponse.data.result.detailId;
+                                  detailResponse.data.result.stadiumBookingDetailId || 
+                                  detailResponse.data.result.stadium_booking_detail_id || 
+                                  detailResponse.data.result.detailId;
             
             if (bookingDetailId) {
               localStorage.setItem(`booking_${newBookingId}_detailId`, bookingDetailId);
@@ -1138,7 +1291,7 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
                     <span className="full-address">{getFullAddress()}</span>
                   </div>
                   <div className="meta-item">
-                    <FontAwesomeIcon icon={faFutbol} className="meta-icon" />
+                    <FontAwesomeIcon icon={getTypeIcon(type?.typeName)} className="meta-icon" style={{ color: getTypeColor(type?.typeName) }} />
                     <span>{getTypeName(type)}</span>
                   </div>
                   <div className="meta-item">
@@ -1158,6 +1311,72 @@ const StadiumDetailPage = ({ openLoginModal = () => console.log('openLoginModal 
                 <div className="stadium-description">
                   <h3>Giới thiệu sân</h3>
                   <p>{stadium.description || 'Không có mô tả cho sân bóng này.'}</p>
+                </div>
+
+                <div className="stadium-map">
+                  <h3><FontAwesomeIcon icon={faMapMarkerAlt} /> Vị trí sân trên bản đồ</h3>
+                  {(mapCoordinates?.latitude && mapCoordinates?.longitude) ? (
+                    <GoongMap 
+                      latitude={mapCoordinates.latitude} 
+                      longitude={mapCoordinates.longitude}
+                      locationName={stadium.stadiumName}
+                      address={getFullAddress()}
+                      height="400px"
+                    />
+                  ) : (
+                    <div className="map-placeholder">
+                      <p className="map-message">Không thể tự động lấy tọa độ cho địa chỉ: {getFullAddress()}</p>
+                      <div className="map-actions">
+                        <button 
+                          className="retry-geocoding" 
+                          onClick={() => {
+                            // Thử lại việc lấy tọa độ
+                            if (location || stadium?.locationId) {
+                              const fetchCoordinates = async () => {
+                                try {
+                                  const fullAddress = getFullAddress();
+                                  if (!fullAddress || fullAddress === "Đang cập nhật địa chỉ...") {
+                                    alert('Không có đủ thông tin địa chỉ để tìm tọa độ');
+                                    return;
+                                  }
+                                  
+                                  console.log('Thử lại geocoding với địa chỉ:', fullAddress);
+                                  try {
+                                    const response = await goongMapAPI.geocode(fullAddress);
+                                    
+                                    if (response.data && response.data.results && response.data.results.length > 0) {
+                                      const result = response.data.results[0];
+                                      const coordinates = result.geometry?.location;
+                                      
+                                      if (coordinates && coordinates.lat && coordinates.lng) {
+                                        console.log('Đã lấy tọa độ từ geocoding:', coordinates);
+                                        setMapCoordinates({
+                                          latitude: coordinates.lat,
+                                          longitude: coordinates.lng
+                                        });
+                                      } else {
+                                        alert('Không tìm thấy tọa độ cho địa chỉ này');
+                                      }
+                                    } else {
+                                      alert('Không tìm thấy tọa độ cho địa chỉ này');
+                                    }
+                                  } catch (error) {
+                                    alert('Không thể kết nối với dịch vụ bản đồ. Vui lòng thử lại sau.');
+                                    console.error('Lỗi khi gọi geocoding API:', error);
+                                  }
+                                } catch (error) {
+                                  console.error('Lỗi khi lấy tọa độ:', error);
+                                }
+                              };
+                              fetchCoordinates();
+                            }
+                          }}
+                        >
+                          <FontAwesomeIcon icon={faMapMarkerAlt} /> Thử lấy tọa độ lại
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="stadium-evaluations">

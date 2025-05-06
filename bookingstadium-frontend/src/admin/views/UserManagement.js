@@ -37,6 +37,10 @@ const UserManagement = () => {
   const [userToDelete, setUserToDelete] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   
+  // Thêm state cho sắp xếp
+  const [sortField, setSortField] = useState('createdAt');
+  const [sortDirection, setSortDirection] = useState('desc'); // 'asc' hoặc 'desc'
+  
   // Thêm state cho phân trang
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -157,6 +161,39 @@ const UserManagement = () => {
     
     return 'USER';
   };
+
+  // Hàm sắp xếp dữ liệu
+  const handleSort = (field) => {
+    // Nếu click vào field đang sắp xếp, đảo ngược hướng sắp xếp
+    if (field === sortField) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Nếu click vào field mới, đặt field đó làm sortField và hướng sắp xếp là desc
+      setSortField(field);
+      setSortDirection('desc');
+    }
+    
+    // Reset về trang đầu tiên khi thay đổi sắp xếp
+    setCurrentPage(1);
+  };
+  
+  // Lấy tên trường hiển thị cho việc sắp xếp
+  const getSortFieldName = (field) => {
+    switch (field) {
+      case 'user_id':
+        return 'ID người dùng';
+      case 'email':
+        return 'Email';
+      case 'fullname':
+        return 'Họ tên';
+      case 'createdAt':
+        return 'Ngày đăng ký';
+      case 'role':
+        return 'Vai trò';
+      default:
+        return field;
+    }
+  };
   
   // Lọc dữ liệu theo từ khóa tìm kiếm
   const filteredUsers = users.filter(user => {
@@ -172,11 +209,46 @@ const UserManagement = () => {
     );
   });
   
+  // Sắp xếp dữ liệu sau khi lọc
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    let aValue, bValue;
+    
+    // Xác định giá trị để sắp xếp dựa vào field
+    switch (sortField) {
+      case 'fullname':
+        aValue = `${a.firstname || ''} ${a.lastname || ''}`.toLowerCase();
+        bValue = `${b.firstname || ''} ${b.lastname || ''}`.toLowerCase();
+        break;
+      case 'email':
+        aValue = (a.email || '').toLowerCase();
+        bValue = (b.email || '').toLowerCase();
+        break;
+      case 'role':
+        aValue = getRoleDisplay(a.role).toLowerCase();
+        bValue = getRoleDisplay(b.role).toLowerCase();
+        break;
+      case 'createdAt':
+        aValue = new Date(a.createdAt || a.created_at || a.date_created || 0).getTime();
+        bValue = new Date(b.createdAt || b.created_at || b.date_created || 0).getTime();
+        break;
+      default:
+        aValue = (a[sortField] || '').toString().toLowerCase();
+        bValue = (b[sortField] || '').toString().toLowerCase();
+    }
+    
+    // So sánh và sắp xếp
+    if (sortDirection === 'asc') {
+      return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+    } else {
+      return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
+    }
+  });
+  
   // Tính toán chỉ số cho phân trang
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentUsers = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const currentUsers = sortedUsers.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(sortedUsers.length / itemsPerPage);
 
   // Xử lý thay đổi trang
   const handlePageChange = (page) => {
@@ -239,6 +311,46 @@ const UserManagement = () => {
     return items;
   };
 
+  // Hàm định dạng ngày giờ
+  const formatDateTime = (dateTimeStr) => {
+    if (!dateTimeStr) return 'N/A';
+    try {
+      const date = new Date(dateTimeStr);
+      // Kiểm tra nếu ngày không hợp lệ
+      if (isNaN(date.getTime())) return 'N/A';
+      
+      // Format ngày theo định dạng "DD-MM-YYYY"
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}-${month}-${year}`;
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'N/A';
+    }
+  };
+
+  // Lấy biểu tượng sắp xếp
+  const getSortIcon = (field) => {
+    if (field !== sortField) return null;
+    
+    return (
+      <span className={`ms-1 text-${sortDirection === 'asc' ? 'primary' : 'danger'}`}>
+        {sortDirection === 'asc' ? '▲' : '▼'}
+      </span>
+    );
+  };
+
+  // Lấy kiểu cho header sắp xếp
+  const getSortHeaderStyle = (field) => {
+    return { 
+      cursor: 'pointer',
+      backgroundColor: sortField === field ? '#f8f9fa' : 'inherit',
+      transition: 'background-color 0.2s',
+      userSelect: 'none'
+    };
+  };
+
   return (
     <>
       <CCard className="mb-4">
@@ -271,17 +383,24 @@ const UserManagement = () => {
             </CCol>
             <CCol md={6} className="text-end">
               <small className="text-muted me-3">
-                {filteredUsers.length > 0 ? (
-                  <>Hiển thị {Math.min(filteredUsers.length, indexOfFirstItem + 1)}-{Math.min(indexOfLastItem, filteredUsers.length)} của {filteredUsers.length} người dùng</>
+                {sortedUsers.length > 0 ? (
+                  <>Hiển thị {Math.min(sortedUsers.length, indexOfFirstItem + 1)}-{Math.min(indexOfLastItem, sortedUsers.length)} của {sortedUsers.length} người dùng</>
                 ) : (
                   <>Không có dữ liệu</>
                 )}
               </small>
+              {sortField && (
+                <small className="text-muted me-3">
+                  Sắp xếp theo: {getSortFieldName(sortField)} ({sortDirection === 'asc' ? 'tăng dần' : 'giảm dần'})
+                </small>
+              )}
               <CButton 
                 color="primary" 
                 size="sm" 
                 onClick={() => {
                   setSearchTerm('');
+                  setSortField('createdAt');
+                  setSortDirection('desc');
                   setCurrentPage(1);
                   fetchUsers();
                 }}
@@ -299,56 +418,114 @@ const UserManagement = () => {
             <div className="text-danger p-3">{error}</div>
           ) : (
             <>
-              <CTable hover responsive className="mb-3">
+              <CTable 
+                hover 
+                responsive 
+                className="align-middle"
+                style={{ tableLayout: 'fixed', width: '100%', borderCollapse: 'collapse' }}
+              >
                 <CTableHead>
                   <CTableRow>
-                    <CTableHeaderCell>ID</CTableHeaderCell>
-                    <CTableHeaderCell>Email</CTableHeaderCell>
-                    <CTableHeaderCell>Họ tên</CTableHeaderCell>
-                    <CTableHeaderCell>Vai trò</CTableHeaderCell>
-                    <CTableHeaderCell>Hành động</CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('user_id')} 
+                      style={{ 
+                        ...getSortHeaderStyle('user_id'),
+                        width: '12%',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      ID {getSortIcon('user_id')}
+                    </CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('email')} 
+                      style={{ 
+                        ...getSortHeaderStyle('email'),
+                        width: '20%'
+                      }}
+                    >
+                      Email {getSortIcon('email')}
+                    </CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('fullname')} 
+                      style={{ 
+                        ...getSortHeaderStyle('fullname'),
+                        width: '18%'
+                      }}
+                    >
+                      Họ và tên {getSortIcon('fullname')}
+                    </CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('createdAt')} 
+                      style={{ 
+                        ...getSortHeaderStyle('createdAt'),
+                        width: '12%'
+                      }}
+                    >
+                      Ngày đăng ký {getSortIcon('createdAt')}
+                    </CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('role')} 
+                      style={{ 
+                        ...getSortHeaderStyle('role'),
+                        width: '12%',
+                        textAlign: 'center'
+                      }}
+                    >
+                      Vai trò {getSortIcon('role')}
+                    </CTableHeaderCell>
+                    <CTableHeaderCell style={{ width: '26%', textAlign: 'center' }}>
+                      Hành động
+                    </CTableHeaderCell>
                   </CTableRow>
                 </CTableHead>
                 <CTableBody>
                   {currentUsers.length === 0 ? (
                     <CTableRow>
-                      <CTableDataCell colSpan={5} className="text-center">
+                      <CTableDataCell colSpan={6} className="text-center">
                         {searchTerm ? 'Không tìm thấy người dùng phù hợp.' : 'Không có người dùng nào.'}
                       </CTableDataCell>
                     </CTableRow>
                   ) : (
                     currentUsers.map((user) => (
                       <CTableRow key={user.user_id}>
-                        <CTableDataCell>{user.user_id}</CTableDataCell>
-                        <CTableDataCell>{user.email}</CTableDataCell>
-                        <CTableDataCell>
-                          {`${user.firstname || ''} ${user.lastname || ''}`}
+                        <CTableDataCell style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {user.user_id}
+                        </CTableDataCell>
+                        <CTableDataCell style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {user.email}
                         </CTableDataCell>
                         <CTableDataCell>
-                          <div className="d-flex align-items-center">
-                            <CBadge color={getRoleBadgeColor(user.role)} className="me-2">
-                              {getRoleDisplay(user.role)}
-                            </CBadge>
+                          {user.firstname} {user.lastname}
+                        </CTableDataCell>
+                        <CTableDataCell>
+                          {formatDateTime(user.createdAt || user.created_at || user.date_created)}
+                        </CTableDataCell>
+                        <CTableDataCell className="text-center">
+                          <CBadge color={getRoleBadgeColor(user.role)}>
+                            {getRoleDisplay(user.role)}
+                          </CBadge>
+                        </CTableDataCell>
+                        <CTableDataCell className="text-center">
+                          <div className="d-flex justify-content-center align-items-center">
                             <CFormSelect
+                              size="sm"
+                              aria-label="Thay đổi vai trò"
+                              style={{ width: '120px', marginRight: '10px' }}
                               value={getCurrentRole(user)}
                               onChange={(e) => handleRoleChange(user.user_id, e.target.value)}
-                              style={{ width: '130px' }}
                             >
                               <option value="USER">Người dùng</option>
                               <option value="OWNER">Chủ sân</option>
-                              <option value="ADMIN">Admin</option>
+                              <option value="ADMIN">Quản trị viên</option>
                             </CFormSelect>
+                            <CButton
+                              color="danger"
+                              size="sm"
+                              onClick={() => confirmDelete(user)}
+                            >
+                              <CIcon icon={cilTrash} />
+                            </CButton>
                           </div>
-                        </CTableDataCell>
-                        <CTableDataCell>
-                          <CButton
-                            color="danger"
-                            size="sm"
-                            onClick={() => confirmDelete(user)}
-                            className="me-2"
-                          >
-                            <CIcon icon={cilTrash} /> Xóa
-                          </CButton>
                         </CTableDataCell>
                       </CTableRow>
                     ))

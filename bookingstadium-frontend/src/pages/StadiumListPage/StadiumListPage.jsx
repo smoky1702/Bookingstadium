@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faStar, faMapMarkerAlt, faMoneyBillWave, faFutbol, faBasketballBall, faVolleyballBall, faTableTennis, faLocationArrow, faInfoCircle} from '@fortawesome/free-solid-svg-icons';
 import { stadiumAPI, typeAPI, locationAPI, imageAPI} from '../../services/apiService';
+import { getTypeStyleSettings, getTypeIcon, getTypeColor } from '../../utils/typeStyleUtils';
 import './StadiumListPage.css';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
@@ -34,16 +35,46 @@ const StadiumListPage = () => {
 
   // Lấy cấu hình màu sắc và icon từ localStorage
   useEffect(() => {
-    const savedSettings = localStorage.getItem('typeStyleSettings');
-    if (savedSettings) {
-      try {
-        const settings = JSON.parse(savedSettings);
-        setTypeStyleSettings(settings);
-      } catch (e) {
-        // Bỏ console.error
-        setTypeStyleSettings({});
+    // Hàm đọc cài đặt từ localStorage
+    const loadSettings = () => {
+      const savedSettings = localStorage.getItem('typeStyleSettings');
+      if (savedSettings) {
+        try {
+          const settings = JSON.parse(savedSettings);
+          setTypeStyleSettings(settings);
+        } catch (e) {
+          // Bỏ console.error
+          setTypeStyleSettings({});
+        }
       }
-    }
+    };
+
+    // Hàm xử lý khi localStorage thay đổi từ tab khác
+    const handleStorageChange = (e) => {
+      if (e.key === 'typeStyleSettings') {
+        loadSettings();
+      }
+    };
+    
+    // Hàm xử lý khi cài đặt thay đổi trong cùng tab
+    const handleSettingsChange = (event) => {
+      setTypeStyleSettings(event.detail.settings || getTypeStyleSettings());
+    };
+
+    // Đăng ký lắng nghe sự kiện storage (thay đổi từ tab khác)
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Đăng ký lắng nghe sự kiện tùy chỉnh (thay đổi từ cùng tab)
+    window.addEventListener('typeSettingsChanged', handleSettingsChange);
+    
+    // Đọc cài đặt lần đầu
+    loadSettings();
+    
+    // Cleanup listener khi unmount
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('typeSettingsChanged', handleSettingsChange);
+    };
   }, []);
 
   // Fetch dữ liệu
@@ -328,42 +359,6 @@ const StadiumListPage = () => {
     }
   };
   
-  // Lấy biểu tượng cho mỗi loại sân
-  const getTypeIcon = (typeName) => {
-    // Tìm icon trong mảng availableIcons
-    const typeConfig = availableIcons.find(item => item.name === typeName);
-    if (typeConfig) {
-      return typeConfig.icon;
-    }
-    
-    // Nếu không tìm thấy, trả về icon mặc định
-    return faFutbol;
-  };
-
-  // Lấy màu cho mỗi loại sân
-  const getTypeColor = (typeName) => {
-    if (!typeName) return "#1a4297"; // Màu mặc định
-    
-    // Kiểm tra xem có cài đặt tùy chỉnh không
-    if (typeStyleSettings[typeName] && typeStyleSettings[typeName].color) {
-      return typeStyleSettings[typeName].color;
-    }
-    
-    // Logic mặc định dựa vào tên
-    const name = typeName.toLowerCase();
-    if (name.includes('bóng đá')) {
-      return "#28a745"; // Màu xanh lá
-    } else if (name.includes('bóng rổ')) {
-      return "#fd7e14"; // Màu cam
-    } else if (name.includes('bóng chuyền')) {
-      return "#dc3545"; // Màu đỏ
-    } else if (name.includes('cầu lông')) {
-      return "#6f42c1"; // Màu tím
-    }
-    
-    return "#1a4297"; // Màu mặc định
-  };
-
   // Hiển thị dropdown chọn loại sân
   const renderTypeFilter = () => (
     <div className="filter-section">

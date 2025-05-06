@@ -9,16 +9,22 @@ const apiClient = axios.create({
   }
 });
 
-// Thêm token vào mỗi request
+// Thêm interceptor để debug request
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('accessToken');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
+    
+    // Log request để debug
+    console.log(`DEBUG - API Request [${config.method.toUpperCase()}] ${config.url}`, 
+      config.data ? config.data : 'No data');
+    
     return config;
   },
   (error) => {
+    console.error('DEBUG - Request Error:', error);
     return Promise.reject(error);
   }
 );
@@ -26,10 +32,22 @@ apiClient.interceptors.request.use(
 // Xử lý response
 apiClient.interceptors.response.use(
   (response) => {
+    // Log response để debug
+    console.log(`DEBUG - API Response [${response.status}] ${response.config.url}`, 
+      response.data ? response.data : 'No data');
+    
     return response;
   },
   (error) => {
+    console.error('DEBUG - Response Error:', error);
+    
     if (error.response) {
+      console.error('DEBUG - Response Error Details:', {
+        status: error.response.status,
+        data: error.response.data,
+        headers: error.response.headers
+      });
+      
       // Xử lý lỗi 401 (Unauthorized)
       if (error.response.status === 401) {
         localStorage.removeItem('accessToken');
@@ -58,7 +76,11 @@ export const typeAPI = {
   getTypes: () => apiClient.get('/type'),
   getTypeById: (typeId) => apiClient.get(`/type/${typeId}`),
   createType: (typeData) => apiClient.post('/type', typeData),
-  updateType: (typeId, typeData) => apiClient.put(`/type/${typeId}`, typeData),
+  updateType: (typeId, typeData) => apiClient.put(`/type/${typeId}`, typeData, {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  }),
   deleteType: (typeId) => apiClient.delete(`/type/${typeId}`),
 };
 

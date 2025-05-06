@@ -1,4 +1,5 @@
 import axios from 'axios';
+import mapConfig from '../config/mapConfig';
 
 // Sửa để trỏ trực tiếp đến backend không có context path
 const API_URL = 'http://localhost:8080';
@@ -388,7 +389,7 @@ const billAPI = {
   
   getBillById: (billId) => apiClient.get(`/bill/${billId}`),
   
-  updateBill: (billId, billData) => apiClient.put(`/bill/${billId}`, billData),
+  updateBill: (billId, billData) => apiClient.put(`/bill/update/${billId}`, billData),
   
   deleteBill: (billId) => apiClient.delete(`/bill/${billId}`),
   
@@ -486,6 +487,132 @@ const imageAPI = {
   deleteImage: (imageId) => apiClient.delete(`/images/${imageId}`),
 };
 
+// API cho Goong Map
+const goongMapAPI = {
+  geocode: (address) => {
+    if (!address) return Promise.reject(new Error('Địa chỉ không được để trống'));
+    
+    // Xử lý địa chỉ: loại bỏ dấu cách thừa, ký tự đặc biệt
+    const cleanAddress = address.trim()
+      .replace(/\s+/g, ' ')
+      .replace(/[^\p{L}\p{N}\s,]/gu, '');
+    
+    // Log để debug
+    console.log('Đang gọi geocode với địa chỉ:', cleanAddress);
+    
+    // Ưu tiên sử dụng API của backend
+    return apiClient.get(`${mapConfig.BACKEND_LOCATION_API}/geocode`, { 
+      params: { address: cleanAddress } 
+    })
+    .catch(backendError => {
+      console.error('Lỗi khi gọi API backend:', backendError);
+      
+      // Nếu API backend lỗi, thử gọi trực tiếp Goong API
+      const encodedAddress = encodeURIComponent(cleanAddress);
+      return axios.get(`${mapConfig.GEOCODE_URL}?address=${encodedAddress}&api_key=${mapConfig.GOONG_API_KEY}`)
+        .catch(goongError => {
+          console.error('Lỗi khi gọi Goong API:', goongError);
+          
+          //thử địa chỉ đơn giản hơn
+          const parts = cleanAddress.split(',');
+          if (parts.length > 1) {
+            const district = parts[parts.length - 2].trim();
+            const city = parts[parts.length - 1].trim();
+            const simpleAddress = `${district}, ${city}`;
+            
+            return apiClient.get(`${mapConfig.BACKEND_LOCATION_API}/geocode`, { 
+              params: { address: simpleAddress } 
+            }).catch(() => {
+              throw new Error('Không thể xác định tọa độ cho địa chỉ này');
+            });
+          }
+          
+          throw new Error('Không thể xác định tọa độ cho địa chỉ này');
+        });
+    });
+  },
+  
+  reverseGeocode: (lat, lng) => {
+    if (!lat || !lng) return Promise.reject(new Error('Tọa độ không hợp lệ'));
+    
+    // Ưu tiên API của backend
+    return apiClient.get(`${mapConfig.BACKEND_LOCATION_API}/reverse-geocode`, { 
+      params: { lat, lng } 
+    })
+    .catch(backendError => {
+      console.error('Lỗi khi gọi API backend reverse geocode:', backendError);
+      
+      // Goong API nếu backend lỗi
+      return axios.get(`${mapConfig.GEOCODE_URL}?latlng=${lat},${lng}&api_key=${mapConfig.GOONG_API_KEY}`)
+        .catch(goongError => {
+          console.error('Lỗi khi gọi Goong API reverse geocode:', goongError);
+          throw new Error('Không thể xác định địa chỉ cho tọa độ này');
+        });
+    });
+  },
+  
+  // Các phương thức khác sử dụng trực tiếp API Goong
+  getPlaceDetail: (placeId) => {
+    return axios.get(`${mapConfig.PLACE_DETAIL_URL}?place_id=${placeId}&api_key=${mapConfig.GOONG_API_KEY}`);
+  },
+  
+  getPlaceAutocomplete: (input, location) => {
+    let url = `${mapConfig.PLACE_AUTOCOMPLETE_URL}?input=${encodeURIComponent(input)}&api_key=${mapConfig.GOONG_API_KEY}`;
+    
+    if (location) {
+      url += `&location=${location.lat},${location.lng}`;
+    }
+    
+    return axios.get(url);
+  },
+  
+  getDirection: (origin, destination, vehicle = 'car') => {
+    const originParam = typeof origin === 'string' 
+      ? origin 
+      : `${origin.lat},${origin.lng}`;
+      
+    const destinationParam = typeof destination === 'string'
+      ? destination
+      : `${destination.lat},${destination.lng}`;
+      
+    return axios.get(
+      `${mapConfig.DIRECTION_URL}?origin=${originParam}&destination=${destinationParam}&vehicle=${vehicle}&api_key=${mapConfig.GOONG_API_KEY}`
+    );
+  },
+  
+  getStaticMap: (lat, lng, zoom, width, height) => {
+    return mapConfig.getStaticMapUrl(lat, lng, zoom, width, height);
+  }
+};
+
+// API cho thanh toán MoMo
+const momoAPI = {
+  createPayment: (billId) => {
+    return apiClient.post(`/api/momo/bill/${billId}`);
+  },
+  
+  simulateIPN: (orderId, momoParams = {}) => {
+    // Tạo payload với các trường bắt buộc, ưu tiên dùng dữ liệu từ MoMo
+    const payload = {
+      resultCode: momoParams.resultCode || '0',
+      orderId: orderId,
+      message: momoParams.message || 'Thanh toán thành công',
+      transId: momoParams.transId || momoParams.requestId || Date.now().toString(),
+      amount: momoParams.amount || '0',
+      extraData: momoParams.extraData || ''
+    };
+    
+    // Thêm các trường khác từ MoMo
+    Object.keys(momoParams).forEach(key => {
+      if (!payload[key]) {
+        payload[key] = momoParams[key];
+      }
+    });
+    
+    return apiClient.post('/api/momo/ipn', payload);
+  }
+};
+
 export {
   apiClient,
   authAPI,
@@ -500,4 +627,6 @@ export {
   paymentMethodAPI,
   workScheduleAPI,
   imageAPI,
+  goongMapAPI,
+  momoAPI
 };

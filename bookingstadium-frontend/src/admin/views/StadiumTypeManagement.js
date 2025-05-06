@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   CButton,
   CCard,
@@ -24,11 +24,21 @@ import {
   CRow,
   CInputGroup,
   CPagination,
-  CPaginationItem
+  CPaginationItem,
+  CFormSelect
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import { cilPlus, cilPencil, cilTrash, cilSearch, cilX } from '@coreui/icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { typeAPI } from '../services/adminApi';
+import { 
+  availableIcons, 
+  availableColors,
+  getTypeStyleSettings, 
+  saveTypeStyleSettings, 
+  getTypeIcon, 
+  getTypeColor 
+} from '../../utils/typeStyleUtils';
 
 const StadiumTypeManagement = () => {
   const [types, setTypes] = useState([]);
@@ -41,6 +51,8 @@ const StadiumTypeManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     typeName: '',
+    iconType: 'Bóng đá',
+    customColor: getTypeColor('Bóng đá')
   });
   const [alert, setAlert] = useState({ show: false, color: 'success', message: '' });
   
@@ -48,11 +60,27 @@ const StadiumTypeManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
+  // Thêm state lưu cài đặt giao diện
+  const [typeStyleSettings, setTypeStyleSettings] = useState({});
+
+  // Thêm dưới khai báo state
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [selectedColor, setSelectedColor] = useState(null);
+  const [searchIconTerm, setSearchIconTerm] = useState('');
+  const [showAllIcons, setShowAllIcons] = useState(false);
+
+  // Load cài đặt từ localStorage khi component mount
+  useEffect(() => {
+    const settings = getTypeStyleSettings();
+    setTypeStyleSettings(settings);
+  }, []);
+
   useEffect(() => {
     fetchTypes();
   }, []);
 
-  const fetchTypes = async () => {
+  // Tạo hàm fetchTypes sử dụng useCallback để có thể tái sử dụng
+  const fetchTypes = useCallback(async () => {
     try {
       setLoading(true);
       const response = await typeAPI.getTypes();
@@ -66,7 +94,7 @@ const StadiumTypeManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -79,6 +107,8 @@ const StadiumTypeManagement = () => {
   const resetForm = () => {
     setFormData({
       typeName: '',
+      iconType: 'Bóng đá',
+      customColor: getTypeColor('Bóng đá')
     });
   };
 
@@ -89,8 +119,27 @@ const StadiumTypeManagement = () => {
 
   const showEditTypeModal = (type) => {
     setSelectedType(type);
+    
+    // Đoán loại icon dựa vào tên hoặc cài đặt đã lưu
+    let iconType = 'Bóng đá';
+    
+    // Kiểm tra trong cài đặt trước
+    if (typeStyleSettings[type.typeName] && typeStyleSettings[type.typeName].iconName) {
+      iconType = typeStyleSettings[type.typeName].iconName;
+    } else {
+      // Nếu không có, dùng quy tắc dựa trên tên
+      const foundIcon = availableIcons.find(item => 
+        type.typeName && type.typeName.toLowerCase().includes(item.name.toLowerCase())
+      );
+      if (foundIcon) {
+        iconType = foundIcon.name;
+      }
+    }
+    
     setFormData({
       typeName: type.typeName || '',
+      iconType: iconType,
+      customColor: typeStyleSettings[type.typeName]?.color || getTypeColor(iconType)
     });
     setShowEditModal(true);
   };
@@ -100,40 +149,71 @@ const StadiumTypeManagement = () => {
     setShowDeleteModal(true);
   };
 
+  // Hiện thông báo với thời gian tự ẩn
+  const showAlert = (color, message, duration = 3000) => {
+    setAlert({
+      show: true,
+      color,
+      message
+    });
+    
+    setTimeout(() => {
+      setAlert(prev => ({ ...prev, show: false }));
+    }, duration);
+  };
+
   const handleAddType = async () => {
+    // Kiểm tra form trước khi gửi
+    if (!formData.typeName.trim()) {
+      showAlert('danger', 'Vui lòng nhập tên loại sân');
+      return;
+    }
+    
+    // Kiểm tra trùng tên
+    const isDuplicate = types.some(type => 
+      type.typeName.toLowerCase() === formData.typeName.trim().toLowerCase()
+    );
+
+    if (isDuplicate) {
+      showAlert('danger', 'Tên loại sân đã tồn tại. Vui lòng chọn tên khác.');
+      return;
+    }
+    
     try {
       setLoading(true);
       
-      // Đảm bảo gửi đúng format dữ liệu mà server mong đợi
+      // Đảm bảo gửi đúng format dữ liệu mà server mong đợi - chỉ gửi type_name
       const typeData = {
-        type_name: formData.typeName
+        type_name: formData.typeName.trim()
       };
       
       console.log('Sending data:', typeData);
-      await typeAPI.createType(typeData);
+      const response = await typeAPI.createType(typeData);
+      
+      // Lưu cài đặt icon cho loại sân mới
+      if (response && response.data && response.data.result) {
+        const newType = response.data.result;
+        // Lưu cài đặt cho loại sân mới
+        updateTypeStyle(formData.typeName.trim(), formData.iconType, formData.customColor);
+      }
       
       // Tải lại danh sách sau khi thêm
       await fetchTypes();
       
       // Đóng modal và hiển thị thông báo
       setShowAddModal(false);
-      setAlert({
-        show: true,
-        color: 'success',
-        message: 'Thêm loại sân thành công'
-      });
+      showAlert('success', 'Thêm loại sân thành công');
       
-      // Ẩn thông báo sau 3 giây
-      setTimeout(() => {
-        setAlert({ ...alert, show: false });
-      }, 3000);
     } catch (err) {
       console.error('Error adding stadium type:', err);
-      setAlert({
-        show: true,
-        color: 'danger',
-        message: 'Không thể thêm loại sân. Vui lòng thử lại.'
-      });
+      let errorMessage = 'Không thể thêm loại sân';
+      
+      // Kiểm tra lỗi trùng tên từ API
+      if (err.response && err.response.data && err.response.data.message === 'Type of stadium existed') {
+        errorMessage = 'Tên loại sân đã tồn tại trong hệ thống';
+      }
+      
+      showAlert('danger', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -142,15 +222,40 @@ const StadiumTypeManagement = () => {
   const handleEditType = async () => {
     if (!selectedType) return;
     
+    // Kiểm tra form trước khi gửi
+    if (!formData.typeName.trim()) {
+      showAlert('danger', 'Vui lòng nhập tên loại sân');
+      return;
+    }
+    
+    // Nếu tên không thay đổi, chỉ đóng modal và không cập nhật gì cả
+    if (formData.typeName.trim() === selectedType.typeName) {
+      console.log('No changes detected in type name, skipping API call');
+      setShowEditModal(false);
+      return;
+    }
+    
+    // Kiểm tra trùng tên
+    const isDuplicate = types.some(type => 
+      type.typeId !== selectedType.typeId && 
+      type.typeName.toLowerCase() === formData.typeName.trim().toLowerCase()
+    );
+
+    if (isDuplicate) {
+      showAlert('danger', 'Tên loại sân đã tồn tại. Vui lòng chọn tên khác.');
+      return;
+    }
+    
     try {
       setLoading(true);
       
-      // Đảm bảo gửi đúng format dữ liệu mà server mong đợi
+      // Chỉ gửi tên loại sân về BE (không gửi loại icon)
       const typeData = {
-        type_name: formData.typeName
+        type_name: formData.typeName.trim()
       };
       
       console.log('Updating type with data:', typeData);
+      
       await typeAPI.updateType(selectedType.typeId, typeData);
       
       // Tải lại danh sách sau khi cập nhật
@@ -158,23 +263,18 @@ const StadiumTypeManagement = () => {
       
       // Đóng modal và hiển thị thông báo
       setShowEditModal(false);
-      setAlert({
-        show: true,
-        color: 'success',
-        message: 'Cập nhật loại sân thành công'
-      });
+      showAlert('success', 'Cập nhật loại sân thành công');
       
-      // Ẩn thông báo sau 3 giây
-      setTimeout(() => {
-        setAlert({ ...alert, show: false });
-      }, 3000);
     } catch (err) {
       console.error('Error updating stadium type:', err);
-      setAlert({
-        show: true,
-        color: 'danger',
-        message: 'Không thể cập nhật loại sân. Vui lòng thử lại.'
-      });
+      let errorMessage = 'Không thể cập nhật loại sân';
+      
+      // Kiểm tra lỗi trùng tên từ API
+      if (err.response && err.response.data && err.response.data.message === 'Type of stadium existed') {
+        errorMessage = 'Tên loại sân đã tồn tại trong hệ thống';
+      }
+      
+      showAlert('danger', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -192,23 +292,11 @@ const StadiumTypeManagement = () => {
       
       // Đóng modal và hiển thị thông báo
       setShowDeleteModal(false);
-      setAlert({
-        show: true,
-        color: 'success',
-        message: 'Xóa loại sân thành công'
-      });
+      showAlert('success', 'Xóa loại sân thành công');
       
-      // Ẩn thông báo sau 3 giây
-      setTimeout(() => {
-        setAlert({ ...alert, show: false });
-      }, 3000);
     } catch (err) {
       console.error('Error deleting stadium type:', err);
-      setAlert({
-        show: true,
-        color: 'danger',
-        message: 'Không thể xóa loại sân. Loại sân này có thể đang được sử dụng.'
-      });
+      showAlert('danger', 'Không thể xóa loại sân. Loại sân này có thể đang được sử dụng.');
     } finally {
       setLoading(false);
     }
@@ -292,6 +380,164 @@ const StadiumTypeManagement = () => {
     return items;
   };
 
+  // Thêm hàm xử lý màu sắc
+  const handleColorSelect = (colorName, colorValue) => {
+    setSelectedColor(colorName);
+    setFormData({...formData, customColor: colorValue});
+    
+    if (selectedType) {
+      updateTypeStyle(selectedType.typeName, formData.iconType, colorValue);
+    }
+  };
+
+  // Lọc icon theo từ khóa tìm kiếm
+  const filteredIcons = availableIcons.filter(icon => 
+    icon.name.toLowerCase().includes(searchIconTerm.toLowerCase())
+  );
+
+  // Cập nhật hàm updateTypeStyle để lưu cả màu tùy chỉnh
+  const updateTypeStyle = (typeName, iconName, color) => {
+    const newSettings = {
+      ...typeStyleSettings,
+      [typeName]: {
+        iconName,
+        color: color
+      }
+    };
+    
+    setTypeStyleSettings(newSettings);
+    saveTypeStyleSettings(newSettings);
+  };
+
+  // Render phần chọn màu sắc
+  const renderColorPicker = () => {
+    return (
+      <div className="color-picker-container mt-3 mb-3">
+        <CFormLabel>Chọn màu sắc</CFormLabel>
+        <div className="color-grid d-flex flex-wrap" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+          {availableColors.map(colorInfo => (
+            <div
+              key={colorInfo.name}
+              title={colorInfo.name}
+              className="color-item m-1"
+              style={{
+                width: '30px',
+                height: '30px',
+                backgroundColor: colorInfo.color,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                border: formData.customColor === colorInfo.color ? '2px solid #000' : '1px solid #ccc'
+              }}
+              onClick={() => handleColorSelect(colorInfo.name, colorInfo.color)}
+            />
+          ))}
+        </div>
+        <div className="color-preview mt-2 d-flex align-items-center">
+          <div 
+            style={{
+              width: '30px', 
+              height: '30px', 
+              backgroundColor: formData.customColor,
+              marginRight: '10px',
+              borderRadius: '4px',
+              border: '1px solid #ccc'
+            }}
+          />
+          <small className="text-muted">{formData.customColor}</small>
+        </div>
+      </div>
+    );
+  };
+
+  // Cập nhật phần chọn icon trong modal thêm mới và sửa
+  const renderIconSelector = () => {
+    return (
+      <div className="icon-selector mb-3">
+        <div className="d-flex justify-content-between align-items-center mb-2">
+          <CFormLabel htmlFor="iconType">Chọn icon</CFormLabel>
+          <CFormInput
+            placeholder="Tìm icon..."
+            size="sm"
+            style={{ width: '150px' }}
+            value={searchIconTerm}
+            onChange={(e) => setSearchIconTerm(e.target.value)}
+          />
+        </div>
+        
+        <div className="icon-grid d-flex flex-wrap" style={{ maxHeight: '250px', overflowY: 'auto' }}>
+          {filteredIcons.map(icon => 
+            renderIconButton(icon, formData.iconType === icon.name, handleIconSelect)
+          )}
+        </div>
+        
+        {filteredIcons.length === 0 && (
+          <div className="text-center py-3">
+            <small className="text-muted">Không tìm thấy icon phù hợp</small>
+          </div>
+        )}
+        
+        {!showAllIcons && filteredIcons.length > 8 && (
+          <div className="text-center mt-2">
+            <CButton 
+              color="link" 
+              size="sm"
+              onClick={() => setShowAllIcons(true)}
+            >
+              Xem tất cả ({filteredIcons.length}) icon
+            </CButton>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Cập nhật handleIconSelect để cập nhật cả màu sắc mới
+  const handleIconSelect = (iconName) => {
+    setFormData({...formData, iconType: iconName});
+    
+    // Lấy màu mặc định cho icon này nếu không có màu tùy chỉnh
+    if (selectedType && !formData.customColor) {
+      const iconColor = getTypeColor(iconName);
+      updateTypeStyle(selectedType.typeName, iconName, iconColor);
+    } else if (selectedType) {
+      updateTypeStyle(selectedType.typeName, iconName, formData.customColor);
+    }
+  };
+
+  // Render icon button component
+  const renderIconButton = (iconInfo, isSelected, onClick) => {
+    const iconColor = getTypeColor(iconInfo.name);
+    
+    return (
+      <div 
+        key={iconInfo.name}
+        className="me-2 p-2" 
+        style={{
+          backgroundColor: isSelected ? `${iconColor}20` : 'transparent',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          border: isSelected ? `1px solid ${iconColor}` : '1px solid transparent'
+        }}
+        onClick={() => onClick(iconInfo.name)}
+      >
+        <div 
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: `${iconColor}15`,
+            color: iconColor
+          }}
+        >
+          <FontAwesomeIcon icon={iconInfo.icon} size="lg" />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       {alert.show && (
@@ -371,33 +617,71 @@ const StadiumTypeManagement = () => {
               <CTable hover responsive>
                 <CTableHead>
                   <CTableRow>
-                    <CTableHeaderCell>ID</CTableHeaderCell>
+                    <CTableHeaderCell style={{ width: '80px' }}>ID</CTableHeaderCell>
+                    <CTableHeaderCell style={{ width: '100px' }}>Icon</CTableHeaderCell>
                     <CTableHeaderCell>Tên loại sân</CTableHeaderCell>
-                    <CTableHeaderCell>Hành động</CTableHeaderCell>
+                    <CTableHeaderCell style={{ width: '150px' }}>Hành động</CTableHeaderCell>
                   </CTableRow>
                 </CTableHead>
                 <CTableBody>
                   {currentTypes.length === 0 ? (
                     <CTableRow>
-                      <CTableDataCell colSpan={3} className="text-center">
+                      <CTableDataCell colSpan={4} className="text-center">
                         {searchTerm ? 'Không tìm thấy kết quả phù hợp.' : 'Không có loại sân nào.'}
                       </CTableDataCell>
                     </CTableRow>
                   ) : (
-                    currentTypes.map((type) => (
-                      <CTableRow key={type.typeId}>
-                        <CTableDataCell>{type.typeId}</CTableDataCell>
-                        <CTableDataCell>{type.typeName}</CTableDataCell>
-                        <CTableDataCell>
-                          <CButton color="primary" size="sm" className="me-2" onClick={() => showEditTypeModal(type)}>
-                            <CIcon icon={cilPencil} />
-                          </CButton>
-                          <CButton color="danger" size="sm" onClick={() => showDeleteTypeModal(type)}>
-                            <CIcon icon={cilTrash} />
-                          </CButton>
-                        </CTableDataCell>
-                      </CTableRow>
-                    ))
+                    currentTypes.map((type) => {
+                      const typeColor = getTypeColor(type.typeName);
+                      const typeIcon = getTypeIcon(type.typeName);
+                      
+                      return (
+                        <CTableRow key={type.typeId}>
+                          <CTableDataCell>{type.typeId}</CTableDataCell>
+                          <CTableDataCell>
+                            <div 
+                              className="type-icon-wrapper" 
+                              style={{
+                                backgroundColor: `${typeColor}15`,
+                                color: typeColor,
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '1.2rem'
+                              }}
+                            >
+                              <FontAwesomeIcon icon={typeIcon} />
+                            </div>
+                          </CTableDataCell>
+                          <CTableDataCell>
+                            <span 
+                              className="type-name-pill" 
+                              style={{
+                                padding: '4px 12px',
+                                borderRadius: '20px',
+                                backgroundColor: `${typeColor}15`,
+                                color: typeColor,
+                                fontWeight: '500',
+                                display: 'inline-block'
+                              }}
+                            >
+                              {type.typeName}
+                            </span>
+                          </CTableDataCell>
+                          <CTableDataCell>
+                            <CButton color="primary" size="sm" className="me-2" onClick={() => showEditTypeModal(type)}>
+                              <CIcon icon={cilPencil} />
+                            </CButton>
+                            <CButton color="danger" size="sm" onClick={() => showDeleteTypeModal(type)}>
+                              <CIcon icon={cilTrash} />
+                            </CButton>
+                          </CTableDataCell>
+                        </CTableRow>
+                      );
+                    })
                   )}
                 </CTableBody>
               </CTable>
@@ -447,6 +731,27 @@ const StadiumTypeManagement = () => {
                 required
               />
             </div>
+            <div className="mb-3">
+              {renderIconSelector()}
+              {renderColorPicker()}
+              <div className="d-flex align-items-center mt-3">
+                <div className="preview-box me-3" style={{ 
+                  width: '40px', 
+                  height: '40px', 
+                  borderRadius: '50%',
+                  backgroundColor: `${formData.customColor}15`,
+                  color: formData.customColor,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <FontAwesomeIcon icon={getTypeIcon(formData.iconType)} />
+                </div>
+                <div>
+                  <strong>Xem trước:</strong> Đây là cách icon và màu sắc sẽ hiển thị trên trang người dùng
+                </div>
+              </div>
+            </div>
           </CForm>
         </CModalBody>
         <CModalFooter>
@@ -476,6 +781,27 @@ const StadiumTypeManagement = () => {
                 placeholder="Nhập tên loại sân"
                 required
               />
+            </div>
+            <div className="mb-3">
+              {renderIconSelector()}
+              {renderColorPicker()}
+              <div className="d-flex align-items-center mt-3">
+                <div className="preview-box me-3" style={{ 
+                  width: '40px', 
+                  height: '40px', 
+                  borderRadius: '50%',
+                  backgroundColor: `${formData.customColor}15`,
+                  color: formData.customColor,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <FontAwesomeIcon icon={getTypeIcon(formData.iconType)} />
+                </div>
+                <div>
+                  <strong>Xem trước:</strong> Đây là cách icon và màu sắc sẽ hiển thị trên trang người dùng
+                </div>
+              </div>
             </div>
           </CForm>
         </CModalBody>

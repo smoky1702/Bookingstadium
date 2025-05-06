@@ -1,0 +1,163 @@
+.payment-return-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f8f9fa;
+}
+
+.payment-return-container {
+  flex: 1;
+  padding: 50px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.payment-result {
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+  width: 100%;
+  max-width: 600px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.processing-icon,
+.success-icon,
+.failed-icon {
+  font-size: 60px;
+  margin-bottom: 20px;
+}
+
+.processing-icon {
+  color: #007bff;
+}
+
+.success-icon {
+  color: #28a745;
+}
+
+.failed-icon {
+  color: #dc3545;
+}
+
+.result-title {
+  margin-bottom: 15px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.result-message {
+  margin-bottom: 25px;
+  color: #6c757d;
+  font-size: 16px;
+}
+
+.bill-summary {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: it 0;
+  max-width: 400px;
+  margin: 0 auto 20px;
+  text-align: left;
+  padding: 15px;
+}
+
+.bill-info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.bill-info-item:last-child {
+  border-bottom: none;
+}
+
+.bill-label {
+  font-weight: 500;
+  color: #495057;
+}
+
+.bill-value {
+  font-weight: 600;
+}
+
+.bill-status {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.bill-status.paid {
+  background-color: #d4edda;
+  color: #28a745;
+}
+
+.bill-status.unpaid {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.countdown {
+  margin: 20px 0;
+  font-size: 14px;
+  color: #6c757d;
+}
+
+.action-buttons {
+  margin-top: 25px;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.retry-button,
+.home-button {
+  padding: 10px 20px;
+  border-radius: 5px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.retry-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+}
+
+.retry-button:hover {
+  background-color: #0069d9;
+}
+
+.home-button {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+}
+
+.home-button:hover {
+  background-color: #5a6268;
+}
+
+@media (max-width: 576px) {
+  .payment-result {
+    padding: 20px;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .retry-button,
+  .home-button {
+    width: 100%;
+  }
+} 

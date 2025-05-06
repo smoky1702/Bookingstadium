@@ -29,7 +29,7 @@ import {
   CPaginationItem
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
-import { cilSearch, cilInfo, cilTrash, cilPencil, cilX } from '@coreui/icons';
+import { cilSearch, cilInfo, cilTrash, cilX } from '@coreui/icons';
 import { billAPI, userAPI, bookingAPI } from '../services/adminApi';
 
 const BillManagement = () => {
@@ -41,13 +41,13 @@ const BillManagement = () => {
   const [userLoading, setUserLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [formData, setFormData] = useState({
-    status: ''
-  });
   const [alert, setAlert] = useState({ show: false, color: 'success', message: '' });
+  
+  // Thêm state cho sắp xếp
+  const [sortField, setSortField] = useState('dateCreated');
+  const [sortDirection, setSortDirection] = useState('desc'); // 'asc' hoặc 'desc'
   
   // Thêm state cho phân trang
   const [currentPage, setCurrentPage] = useState(1);
@@ -198,26 +198,15 @@ const BillManagement = () => {
     return `Người dùng ${userId.substring(0, 8)}`;
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
-  };
-
   const showBillDetail = async (bill) => {
-    //   console.log('Chi tiết hóa đơn:', bill);
     setSelectedBill(bill);
     
     // Tải thông tin người dùng nếu chưa có
     if (bill.userId && !users[bill.userId]) {
       try {
-        //   console.log(`Fetching user data for detail view, userId: ${bill.userId}`);
         const response = await userAPI.getUserById(bill.userId);
         
         if (response.data && response.data.result) {
-        //   console.log('User detail data:', response.data.result);
           setUsers(prev => ({
             ...prev,
             [bill.userId]: response.data.result
@@ -231,12 +220,10 @@ const BillManagement = () => {
     // Tải thông tin đặt sân nếu chưa có
     if (bill.stadiumBookingId && !bookings[bill.stadiumBookingId]) {
       try {
-        //   console.log(`Fetching booking data for detail view, bookingId: ${bill.stadiumBookingId}`);
         const response = await bookingAPI.getBookingById(bill.stadiumBookingId);
         
         if (response.data && response.data.result) {
           const bookingData = response.data.result;
-        //   console.log('Booking detail data:', bookingData);
           
           setBookings(prev => ({
             ...prev,
@@ -251,52 +238,9 @@ const BillManagement = () => {
     setShowDetailModal(true);
   };
 
-  const showEditBillModal = (bill) => {
-    setSelectedBill(bill);
-    setFormData({
-      status: bill.status || ''
-    });
-    setShowEditModal(true);
-  };
-
   const showDeleteBillModal = (bill) => {
     setSelectedBill(bill);
     setShowDeleteModal(true);
-  };
-
-  const handleUpdateBill = async () => {
-    if (!selectedBill) return;
-    
-    try {
-      setLoading(true);
-      
-      await billAPI.updateBill(selectedBill.billId, formData);
-      
-      // Tải lại danh sách sau khi cập nhật
-      await fetchBills();
-      
-      // Đóng modal và hiển thị thông báo
-      setShowEditModal(false);
-      setAlert({
-        show: true,
-        color: 'success',
-        message: 'Cập nhật hóa đơn thành công'
-      });
-      
-      // Ẩn thông báo sau 3 giây
-      setTimeout(() => {
-        setAlert({ ...alert, show: false });
-      }, 3000);
-    } catch (err) {
-      // console.error('Error updating bill:', err);
-      setAlert({
-        show: true,
-        color: 'danger',
-        message: 'Không thể cập nhật hóa đơn. Vui lòng thử lại.'
-      });
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleDeleteBill = async () => {
@@ -336,14 +280,20 @@ const BillManagement = () => {
   // Hàm định dạng ngày giờ
   const formatDateTime = (dateTimeStr) => {
     if (!dateTimeStr) return 'N/A';
-    const date = new Date(dateTimeStr);
-    return new Intl.DateTimeFormat('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
+    try {
+      const date = new Date(dateTimeStr);
+      // Kiểm tra nếu ngày không hợp lệ
+      if (isNaN(date.getTime())) return 'N/A';
+      
+      // Format ngày theo định dạng "DD-MM-YYYY"
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}-${month}-${year}`;
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'N/A';
+    }
   };
 
   // Hàm định dạng tiền tệ
@@ -399,6 +349,26 @@ const BillManagement = () => {
     }
   };
 
+  // Lấy tên trường hiển thị cho việc sắp xếp
+  const getSortFieldName = (field) => {
+    switch (field) {
+      case 'billId':
+        return 'ID hóa đơn';
+      case 'userId':
+        return 'Người dùng';
+      case 'stadiumBookingId':
+        return 'ID đặt sân';
+      case 'dateCreated':
+        return 'Ngày tạo';
+      case 'finalPrice':
+        return 'Tổng tiền';
+      case 'status':
+        return 'Trạng thái';
+      default:
+        return field;
+    }
+  };
+
   // Lọc dữ liệu theo từ khóa tìm kiếm
   const filteredBills = bills.filter(bill => {
     if (!searchTerm) return true;
@@ -413,11 +383,61 @@ const BillManagement = () => {
     );
   });
   
+  // Hàm sắp xếp dữ liệu
+  const handleSort = (field) => {
+    // Nếu click vào field đang sắp xếp, đảo ngược hướng sắp xếp
+    if (field === sortField) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Nếu click vào field mới, đặt field đó làm sortField và hướng sắp xếp là desc
+      setSortField(field);
+      setSortDirection('desc');
+    }
+    
+    // Reset về trang đầu tiên khi thay đổi sắp xếp
+    setCurrentPage(1);
+  };
+  
+  // Sắp xếp dữ liệu sau khi lọc
+  const sortedBills = [...filteredBills].sort((a, b) => {
+    let aValue, bValue;
+    
+    // Xác định giá trị để sắp xếp dựa vào field
+    switch (sortField) {
+      case 'dateCreated':
+        aValue = new Date(a.dateCreated || a.date_created || 0).getTime();
+        bValue = new Date(b.dateCreated || b.date_created || 0).getTime();
+        break;
+      case 'finalPrice':
+        aValue = Number(a.finalPrice || a.totalPrice || 0);
+        bValue = Number(b.finalPrice || b.totalPrice || 0);
+        break;
+      case 'status':
+        aValue = a.status || '';
+        bValue = b.status || '';
+        break;
+      case 'userId':
+        aValue = getUserInfo(a.userId) || '';
+        bValue = getUserInfo(b.userId) || '';
+        break;
+      default:
+        aValue = a[sortField] || '';
+        bValue = b[sortField] || '';
+    }
+    
+    // So sánh và sắp xếp
+    if (sortDirection === 'asc') {
+      return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+    } else {
+      return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
+    }
+  });
+  
   // Tính toán chỉ số cho phân trang
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentBills = filteredBills.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredBills.length / itemsPerPage);
+  const currentBills = sortedBills.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(sortedBills.length / itemsPerPage);
 
   // Xử lý thay đổi trang
   const handlePageChange = (page) => {
@@ -498,6 +518,27 @@ const BillManagement = () => {
 
   const currentRole = getCurrentRole();
 
+  // Lấy biểu tượng sắp xếp
+  const getSortIcon = (field) => {
+    if (field !== sortField) return null;
+    
+    return (
+      <span className={`ms-1 text-${sortDirection === 'asc' ? 'primary' : 'danger'}`}>
+        {sortDirection === 'asc' ? '▲' : '▼'}
+      </span>
+    );
+  };
+
+  // Lấy kiểu cho header sắp xếp
+  const getSortHeaderStyle = (field) => {
+    return { 
+      cursor: 'pointer',
+      backgroundColor: sortField === field ? '#f8f9fa' : 'inherit',
+      transition: 'background-color 0.2s',
+      userSelect: 'none'
+    };
+  };
+
   return (
     <>
       {alert.show && (
@@ -542,11 +583,18 @@ const BillManagement = () => {
                   <>Không có dữ liệu</>
                 )}
               </small>
+              {sortField && (
+                <small className="text-muted me-3">
+                  Sắp xếp theo: {getSortFieldName(sortField)} ({sortDirection === 'asc' ? 'tăng dần' : 'giảm dần'})
+                </small>
+              )}
               <CButton 
                 color="primary" 
                 size="sm" 
                 onClick={() => {
                   setSearchTerm('');
+                  setSortField('dateCreated');
+                  setSortDirection('desc');
                   setCurrentPage(1);
                   fetchBills();
                 }}
@@ -567,12 +615,42 @@ const BillManagement = () => {
               <CTable hover responsive>
                 <CTableHead>
                   <CTableRow>
-                    <CTableHeaderCell>ID hóa đơn</CTableHeaderCell>
-                    <CTableHeaderCell>Người dùng</CTableHeaderCell>
-                    <CTableHeaderCell>ID đặt sân</CTableHeaderCell>
-                    <CTableHeaderCell>Ngày tạo</CTableHeaderCell>
-                    <CTableHeaderCell>Tổng tiền</CTableHeaderCell>
-                    <CTableHeaderCell>Trạng thái</CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('billId')} 
+                      style={getSortHeaderStyle('billId')}
+                    >
+                      ID hóa đơn {getSortIcon('billId')}
+                    </CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('userId')} 
+                      style={getSortHeaderStyle('userId')}
+                    >
+                      Người dùng {getSortIcon('userId')}
+                    </CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('stadiumBookingId')} 
+                      style={getSortHeaderStyle('stadiumBookingId')}
+                    >
+                      ID đặt sân {getSortIcon('stadiumBookingId')}
+                    </CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('dateCreated')} 
+                      style={getSortHeaderStyle('dateCreated')}
+                    >
+                      Ngày tạo {getSortIcon('dateCreated')}
+                    </CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('finalPrice')} 
+                      style={getSortHeaderStyle('finalPrice')}
+                    >
+                      Tổng tiền {getSortIcon('finalPrice')}
+                    </CTableHeaderCell>
+                    <CTableHeaderCell 
+                      onClick={() => handleSort('status')} 
+                      style={getSortHeaderStyle('status')}
+                    >
+                      Trạng thái {getSortIcon('status')}
+                    </CTableHeaderCell>
                     <CTableHeaderCell>Hành động</CTableHeaderCell>
                   </CTableRow>
                 </CTableHead>
@@ -607,14 +685,9 @@ const BillManagement = () => {
                             <CIcon icon={cilInfo} />
                           </CButton>
                           {currentRole === 'ADMIN' && (
-                            <>
-                              <CButton color="primary" size="sm" className="me-1" onClick={() => showEditBillModal(bill)}>
-                                <CIcon icon={cilPencil} />
-                              </CButton>
-                              <CButton color="danger" size="sm" onClick={() => showDeleteBillModal(bill)}>
-                                <CIcon icon={cilTrash} />
-                              </CButton>
-                            </>
+                            <CButton color="danger" size="sm" onClick={() => showDeleteBillModal(bill)}>
+                              <CIcon icon={cilTrash} />
+                            </CButton>
                           )}
                         </CTableDataCell>
                       </CTableRow>
@@ -732,39 +805,6 @@ const BillManagement = () => {
         <CModalFooter>
           <CButton color="secondary" onClick={() => setShowDetailModal(false)}>
             Đóng
-          </CButton>
-        </CModalFooter>
-      </CModal>
-
-      {/* Modal sửa hóa đơn */}
-      <CModal visible={showEditModal} onClose={() => setShowEditModal(false)}>
-        <CModalHeader>
-          <CModalTitle>Cập nhật trạng thái hóa đơn</CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          <CForm>
-            <div className="mb-3">
-              <CFormLabel htmlFor="status">Trạng thái</CFormLabel>
-              <CFormSelect
-                id="status"
-                name="status"
-                value={formData.status}
-                onChange={handleInputChange}
-              >
-                <option value="">-- Chọn trạng thái --</option>
-                <option value="UNPAID">Chờ thanh toán</option>
-                <option value="PAID">Đã thanh toán</option>
-                <option value="CANCELLED">Đã hủy</option>
-              </CFormSelect>
-            </div>
-          </CForm>
-        </CModalBody>
-        <CModalFooter>
-          <CButton color="secondary" onClick={() => setShowEditModal(false)}>
-            Hủy
-          </CButton>
-          <CButton color="primary" onClick={handleUpdateBill} disabled={loading}>
-            {loading ? <CSpinner size="sm" /> : 'Lưu thay đổi'}
           </CButton>
         </CModalFooter>
       </CModal>
