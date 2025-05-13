@@ -1,7 +1,7 @@
 -- CREATE DATABASE SportsBooking;
 -- USE SportsBooking;
--- CREATE DATABASE bookingdb3;
--- USE bookingdb3;
+-- CREATE DATABASE bookingdb;
+-- USE bookingdb;
 
 -- Bảng quản lý vai trò
 -- CREATE TABLE Roles (
@@ -34,10 +34,11 @@ CREATE TABLE Stadium_Location (
     user_id CHAR(36),
     location_name VARCHAR(100) NOT NULL,
     address TEXT NOT NULL,
-    city VARCHAR(50),
+    ward VARCHAR(50),
     district VARCHAR(50),
-    longitude DECIMAL(10,7),
+    city VARCHAR(50),
     latitude DECIMAL(10,7),
+    longitude DECIMAL(10,7),
     FOREIGN KEY (user_id) REFERENCES Users(user_id)
 );
 
@@ -69,7 +70,7 @@ CREATE TABLE Stadium_Booking (
     date_of_booking DATE NOT NULL,
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
-    status ENUM('PENDING', 'CONFIRMED', 'CANCELLED') DEFAULT 'PENDING',
+    status ENUM('PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED') DEFAULT 'PENDING',
     date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CHECK (start_time < end_time),
     FOREIGN KEY (user_id) REFERENCES Users(user_id),
@@ -156,8 +157,13 @@ CREATE TABLE Evaluation (
 -- Bảng thông báo
 CREATE TABLE Notification (
     notification_id CHAR(36) PRIMARY KEY,
+    user_id CHAR(36) NOT NULL,
     content TEXT NOT NULL,
-    date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    reference_id VARCHAR(50),         -- liên kết đến booking/sân/... (optional)
+    reference_type VARCHAR(50),       -- loại tham chiếu: "BOOKING", "STADIUM", ...
+    is_read BOOLEAN DEFAULT FALSE,
+    date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
 );
 
 -- Bảng lịch làm việc
@@ -200,3 +206,7 @@ CREATE TABLE Image (
     date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (stadium_id) REFERENCES Stadium(stadium_id)
 );
+
+-- USE SportsBooking;
+-- ALTER TABLE stadium 
+-- MODIFY COLUMN status ENUM('INACTIVE', 'AVAILABLE') NOT NULL DEFAULT 'INACTIVE';

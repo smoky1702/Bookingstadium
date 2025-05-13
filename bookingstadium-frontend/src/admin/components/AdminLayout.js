@@ -98,6 +98,12 @@ const AdminLayout = () => {
           </CNavItem>
           <CNavTitle>Quản lý</CNavTitle>
           <CNavItem>
+            <NavLink to="/admin/stadium-approval" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
+              <CIcon icon={cilPeople} className="me-2" />
+              Duyệt sân
+            </NavLink>
+          </CNavItem>
+          <CNavItem>
             <NavLink to="/admin/users" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
               <CIcon icon={cilPeople} className="me-2" />
               Quản lý người dùng

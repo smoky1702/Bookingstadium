@@ -2,6 +2,7 @@ package com.example.bookingStadium.dto.request.Stadium;
 
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import lombok.Data;
@@ -22,7 +23,7 @@ public class StadiumUpdateRequest {
 
     @JsonProperty("status")
     @Enumerated(EnumType.STRING)
-    private StadiumStatus status = StadiumStatus.AVAILABLE;
+    private StadiumStatus status = StadiumStatus.INACTIVE;
 
     @JsonProperty("description")
     private String description;

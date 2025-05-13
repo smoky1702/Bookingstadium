@@ -34,13 +34,14 @@ import {
   cilFilter,
   cilX
 } from '@coreui/icons';
-import { stadiumAPI, typeAPI, locationAPI, imageAPI } from '../services/adminApi';
+import { stadiumAPI, typeAPI, locationAPI, imageAPI, userAPI } from '../services/adminApi';
 
 const StadiumManagement = () => {
   const [stadiums, setStadiums] = useState([]);
   const [types, setTypes] = useState({});
   const [locations, setLocations] = useState({});
   const [images, setImages] = useState({});
+  const [owners, setOwners] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -69,7 +70,8 @@ const StadiumManagement = () => {
       const typeData = typeResponse.data?.result || [];
       const typeMap = {};
       typeData.forEach(type => {
-        typeMap[type.typeId] = type.typeName;
+        const typeId = type.typeId || type.type_id;
+        typeMap[typeId] = type.typeName || type.type_name;
       });
       setTypes(typeMap);
       
@@ -78,9 +80,27 @@ const StadiumManagement = () => {
       const locationData = locationResponse.data?.result || [];
       const locationMap = {};
       locationData.forEach(location => {
-        locationMap[location.locationId] = location.locationName;
+        const locationId = location.locationId || location.location_id;
+        locationMap[locationId] = location.locationName || location.location_name;
       });
       setLocations(locationMap);
+      
+      // Lấy danh sách người dùng (chủ sân)
+      try {
+        const userResponse = await userAPI.getAllUsers();
+        const userData = userResponse.data?.result || [];
+        const ownerMap = {};
+        userData.forEach(user => {
+          const userId = user.user_id || user.userId;
+          if (userId) {
+            ownerMap[userId] = `${user.firstname || ''} ${user.lastname || ''}`.trim() || user.username || 'Không xác định';
+          }
+        });
+        setOwners(ownerMap);
+        console.log('Owner map:', ownerMap);
+      } catch (err) {
+        console.error('Error fetching users:', err);
+      }
       
       // Lấy danh sách hình ảnh
       try {
@@ -138,6 +158,10 @@ const StadiumManagement = () => {
 
   const getLocationName = (locationId) => {
     return locations[locationId] || 'Không xác định';
+  };
+
+  const getOwnerName = (userId) => {
+    return owners[userId] || 'Không xác định';
   };
 
   const formatCurrency = (amount) => {
@@ -455,7 +479,17 @@ const StadiumManagement = () => {
                       </tr>
                       <tr>
                         <th>Địa điểm:</th>
-                        <td>{getLocationName(selectedStadium.locationId)}</td>
+                        <td>{getLocationName(selectedStadium.locationId || selectedStadium.location_id)}</td>
+                      </tr>
+                      <tr>
+                        <th>Chủ sân:</th>
+                        <td>
+                          {selectedStadium.ownerId || selectedStadium.owner_id ? 
+                            getOwnerName(selectedStadium.ownerId || selectedStadium.owner_id) : 
+                            (selectedStadium.location && (selectedStadium.location.userId || selectedStadium.location.user_id) ? 
+                              getOwnerName(selectedStadium.location.userId || selectedStadium.location.user_id) : 
+                              'Không có thông tin')}
+                        </td>
                       </tr>
                       <tr>
                         <th>Giá:</th>

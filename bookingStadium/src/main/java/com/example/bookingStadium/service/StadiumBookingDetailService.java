@@ -127,11 +127,15 @@ public class StadiumBookingDetailService {
     }
 
     public StadiumBookingDetailResponse findByBookingId(String bookingId) {
-        StadiumBookingDetail detail = stadiumBookingDetailRepository.findByBookingId(bookingId);
-        if (detail == null) {
+        try {
+            StadiumBookingDetail detail = stadiumBookingDetailRepository.findByBookingId(bookingId);
+            if (detail == null) {
+                throw new AppException(ErrorCode.BOOKING_DETAIL_NOT_EXISTED);
+            }
+            return stadiumBookingDetailMapper.toStadiumBookingDetailResponse(detail);
+        } catch (Exception e) {
             throw new AppException(ErrorCode.BOOKING_DETAIL_NOT_EXISTED);
         }
-        return stadiumBookingDetailMapper.toStadiumBookingDetailResponse(detail);
     }
 }
 

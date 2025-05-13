@@ -1,6 +1,9 @@
 package com.example.bookingStadium.config;
 
-import lombok.experimental.NonFinal;
+import java.util.Arrays;
+
+import javax.crypto.spec.SecretKeySpec;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,13 +17,11 @@ import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
-
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import java.util.Arrays;
 
-import javax.crypto.spec.SecretKeySpec;
+import lombok.experimental.NonFinal;
 
 @Configuration
 @EnableWebSecurity
@@ -55,6 +56,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/users/me").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/users/{userId}").authenticated()
 
+                        // API CHATBOT - Yêu cầu đăng nhập
+                        .requestMatchers(HttpMethod.POST, "/api/chatbot/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/chatbot/**").authenticated()
+
                         // lịch sử đặt sân vs bill
                         .requestMatchers(HttpMethod.GET, "/users/{userId}/bookings", "/users/{userId}/bills").authenticated()
                         .requestMatchers(HttpMethod.GET, "/users/me/bookings", "/users/me/bills").authenticated()
@@ -63,23 +68,23 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST,"/bill/user").hasAuthority("SCOPE_USER")
                         .requestMatchers(HttpMethod.PUT, "/bill/update/{billId}").hasAnyAuthority("SCOPE_USER", "SCOPE_OWNER")
 
-                        .requestMatchers(HttpMethod.GET, "/bill/{billId}").authenticated() //Chỉnh sửa service
+                        .requestMatchers(HttpMethod.GET, "/bill/{billId}").authenticated() 
                         .requestMatchers(HttpMethod.POST,"/bill").hasAnyAuthority("SCOPE_USER")
                        // .requestMatchers(HttpMethod.PUT, "/bill/update/{billId}").hasAnyAuthority("SCOPE_USER")
 
                         // API ADMIN
-                        .requestMatchers(HttpMethod.GET, "/users").hasAuthority("SCOPE_ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/users/{userId}").hasAuthority("SCOPE_ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/type", "/PaymentMethod").hasAuthority("SCOPE_ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/type/{typeId}", "/PaymentMethod/{PaymentMethodId}").hasAuthority("SCOPE_ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/type/{typeId}", "/PaymentMethod/{PaymentMethodId}").hasAuthority("SCOPE_ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/users/role/{userId}").hasAuthority("SCOPE_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/bill").hasAnyAuthority("SCOPE_OWNER", "ROLE_OWNER", "SCOPE_ADMIN", "ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/users/{userId}").hasAnyAuthority("SCOPE_ADMIN", "ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/type", "/PaymentMethod").hasAnyAuthority("SCOPE_ADMIN", "ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/type/{typeId}", "/PaymentMethod/{PaymentMethodId}").hasAnyAuthority("SCOPE_ADMIN", "ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/type/{typeId}", "/PaymentMethod/{PaymentMethodId}").hasAnyAuthority("SCOPE_ADMIN", "ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/users/role/{userId}").hasAnyAuthority("SCOPE_ADMIN", "ROLE_ADMIN")
 
                         // API OWNER
                         .requestMatchers(HttpMethod.POST, "/location", "/stadium", "/images/upload"
                                 , "/WorkSchedule", "/bill/owner").hasAuthority("SCOPE_OWNER")
                         .requestMatchers(HttpMethod.PUT, "/location/{locationId}", "/stadium/{stadiumId}"
-                                , "/images/update/{imageId}", "/WorkSchedule/{WorkScheduleId}", "/bill/paid/{billId}").hasAuthority("SCOPE_OWNER")
+                                , "/images/update/{imageId}", "/WorkSchedule/{WorkScheduleId}", "/bill/paid/{billId}").hasAnyAuthority("SCOPE_OWNER", "ROLE_OWNER", "SCOPE_ADMIN", "ROLE_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/location/{locationId}", "/stadium/{stadiumId}"
                                 , "/images/upload/{imageId}", "/WorkSchedule/{WorkScheduleId}", "/bill/{billId}").hasAuthority("SCOPE_OWNER")
                         .requestMatchers(HttpMethod.GET, "/bill").hasAnyAuthority
@@ -94,7 +99,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/booking/{bookingId}"
                                 , "/details/{stadiumBookingDetailId}").authenticated()
                         .requestMatchers(HttpMethod.GET, "/stadium/{stadiumId}/booking/**").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/booking", "/details").hasAuthority("SCOPE_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/booking", "/details").hasAnyAuthority("SCOPE_ADMIN", "ROLE_ADMIN")
 
                         // EVALUATION
                         .requestMatchers(HttpMethod.POST, "/evaluation").hasAuthority("SCOPE_USER")

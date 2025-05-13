@@ -76,4 +76,11 @@ public class StadiumLocationService {
     public void deleteLocation(String location_id){
         stadiumLocationRepository.deleteById(location_id);
     }
+    
+    /**
+     * Tìm tất cả location thuộc quyền sở hữu của owner theo user_id
+     */
+    public List<Stadium_Location> findByUserId(String userId) {
+        return stadiumLocationRepository.findByUserId(userId);
+    }
 }

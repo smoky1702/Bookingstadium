@@ -16,6 +16,7 @@ const LocationManagement = lazy(() => import('./views/LocationManagement'));
 const ImageManagement = lazy(() => import('./views/ImageManagement'));
 const EvaluationManagement = lazy(() => import('./views/EvaluationManagement'));
 const WorkScheduleManagement = lazy(() => import('./views/WorkScheduleManagement'));
+const StadiumApprovalManagement = lazy(() => import('./views/OwnerManagement'));
 
 // Placeholder cho các trang chưa làm
 const ComingSoon = () => (
@@ -50,6 +51,7 @@ const AdminRoutes = () => {
         >
           <Route index element={<Navigate to="/admin/dashboard" />} />
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="stadium-approval" element={<StadiumApprovalManagement />} />
           <Route path="users" element={<UserManagement />} />
           <Route path="stadium-types" element={<StadiumTypeManagement />} />
           <Route path="stadiums" element={<StadiumManagement />} />

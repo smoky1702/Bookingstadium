@@ -1,12 +1,18 @@
 package com.example.bookingStadium.entity;
 
+import java.time.LocalDate;
 
 import com.example.bookingStadium.dto.request.Stadium.StadiumStatus;
-import jakarta.persistence.*;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.time.LocalDate;
 
 @Entity
 @Getter
@@ -30,8 +36,8 @@ public class Stadium {
     private double price;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status")
-    private StadiumStatus status = StadiumStatus.AVAILABLE;
+    @Column(name = "status", columnDefinition = "ENUM('INACTIVE', 'AVAILABLE')")
+    private StadiumStatus status = StadiumStatus.INACTIVE;
 
     @Column(name = "date_created")
     private LocalDate dateCreated;

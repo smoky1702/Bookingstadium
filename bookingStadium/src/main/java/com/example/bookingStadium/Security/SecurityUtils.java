@@ -1,10 +1,16 @@
 package com.example.bookingStadium.Security;
 
 import com.example.bookingStadium.entity.Booking;
+import com.example.bookingStadium.entity.Stadium;
+import com.example.bookingStadium.entity.StadiumBookingDetail;
+import com.example.bookingStadium.entity.Stadium_Location;
 import com.example.bookingStadium.entity.Users;
 import com.example.bookingStadium.exception.AppException;
 import com.example.bookingStadium.exception.ErrorCode;
 import com.example.bookingStadium.repository.BookingRepository;
+import com.example.bookingStadium.repository.StadiumBookingDetailRepository;
+import com.example.bookingStadium.repository.StadiumRepository;
+import com.example.bookingStadium.repository.StadiumLocationRepository;
 import com.example.bookingStadium.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -66,6 +72,38 @@ public class SecurityUtils {
 
     @Autowired
     private BookingRepository bookingRepository;
+    @Autowired
+    private StadiumRepository stadiumRepository;
+    @Autowired
+    private StadiumLocationRepository locationRepository;
+    @Autowired
+    private StadiumBookingDetailRepository stadiumBookingDetailRepository;
+
+    /**
+     * Kiểm tra xem người dùng hiện tại có phải là owner của sân không
+     */
+    public boolean isOwnerOfStadium(String stadiumId) {
+        // Tìm sân
+        Stadium stadium = stadiumRepository.findById(stadiumId)
+                .orElse(null);
+        if (stadium == null) {
+            return false;
+        }
+
+        // Tìm location_id của sân
+        String locationId = stadium.getLocationId();
+        
+        // Tìm user_id (owner) của location
+        Stadium_Location location = locationRepository.findById(locationId)
+                .orElse(null);
+        if (location == null) {
+            return false;
+        }
+        
+        // Kiểm tra xem người dùng hiện tại có phải là owner không
+        return isCurrentUser(location.getUserId());
+    }
+
     public boolean isOwnerOfBooking(String bookingId) {
         // Nếu là admin, luôn cho phép
         if (isAdmin()) {
@@ -79,8 +117,17 @@ public class SecurityUtils {
             return false;
         }
 
-        // Kiểm tra người dùng hiện tại có phải chủ sở hữu
-        return isCurrentUser(booking.getUserId());
+        // Tìm stadiumId từ stadium_booking_details
+        StadiumBookingDetail detail = stadiumBookingDetailRepository.findByBookingId(bookingId);
+        if (detail == null) {
+            return false;
+        }
+
+        // Kiểm tra xem người dùng hiện tại có phải là:
+        // 1. Người tạo booking (user) hoặc
+        // 2. Owner của sân
+        return isCurrentUser(booking.getUserId()) || 
+               isOwnerOfStadium(detail.getStadiumId());
     }
 
     public boolean isOwnerOfBooking(Authentication authentication, String bookingId) {
@@ -90,4 +137,4 @@ public class SecurityUtils {
 
         return isOwnerOfBooking(bookingId);
     }
-} 
+}

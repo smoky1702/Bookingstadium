@@ -18,7 +18,7 @@ import UserGuide from './landingpage/UserGuide';
 import './App.css';
 
 // Lazy load Admin routes
-const AdminRoutes = lazy(() => import('./admin/AdminRoutes'));
+const AdminRoutes = lazy(() => import('./Admin/AdminRoutes'));
 
 function App() {
   // Loading component cho Suspense

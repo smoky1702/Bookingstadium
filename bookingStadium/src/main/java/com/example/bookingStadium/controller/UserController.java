@@ -2,19 +2,24 @@ package com.example.bookingStadium.controller;
 
 
 import com.example.bookingStadium.dto.request.Users.UserUpdateRoleRequest;
+import com.example.bookingStadium.dto.request.Users.UserUpdateRequest;
 import com.example.bookingStadium.dto.response.ApiResponse;
 import com.example.bookingStadium.dto.request.Users.UserCreationRequest;
-import com.example.bookingStadium.dto.request.Users.UserUpdateRequest;
-import com.example.bookingStadium.dto.response.Users.UserResponse;
-import com.example.bookingStadium.entity.Users;
-import com.example.bookingStadium.service.UserService;
 import com.example.bookingStadium.dto.response.BillResponse;
 import com.example.bookingStadium.dto.response.BookingResponse;
+import com.example.bookingStadium.dto.response.Users.UserResponse;
+import com.example.bookingStadium.entity.Stadium;
+import com.example.bookingStadium.entity.Stadium_Location;
+import com.example.bookingStadium.entity.Users;
 import com.example.bookingStadium.service.BillService;
 import com.example.bookingStadium.service.BookingService;
+import com.example.bookingStadium.service.StadiumLocationService;
+import com.example.bookingStadium.service.StadiumService;
+import com.example.bookingStadium.service.UserService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,6 +37,12 @@ public class UserController {
 
     @Autowired
     private BillService billService;
+    
+    @Autowired
+    private StadiumLocationService stadiumLocationService;
+    
+    @Autowired
+    private StadiumService stadiumService;
 
     @PostMapping
     ApiResponse<Users> createUser(@RequestBody @Valid UserCreationRequest request){
@@ -63,6 +74,28 @@ public class UserController {
     ApiResponse<UserResponse> findUser(@PathVariable("userId") String userId){
         ApiResponse<UserResponse> apiResponse = new ApiResponse<>();
         apiResponse.setResult(userService.findUser(userId));
+        return apiResponse;
+    }
+    
+    /**
+     * Lấy danh sách location thuộc quyền sở hữu của owner theo user_id
+     */
+    @GetMapping("/{userId}/locations")
+    @PreAuthorize("isAuthenticated() and (@securityUtils.isAdmin() or @securityUtils.isCurrentUser(#userId))")
+    ApiResponse<List<Stadium_Location>> getOwnerLocations(@PathVariable("userId") String userId) {
+        List<Stadium_Location> locations = stadiumLocationService.findByUserId(userId);
+        ApiResponse<List<Stadium_Location>> apiResponse = new ApiResponse<>(locations);
+        return apiResponse;
+    }
+    
+    /**
+     * Lấy danh sách stadium thuộc quyền sở hữu của owner theo user_id
+     */
+    @GetMapping("/{userId}/stadiums")
+    @PreAuthorize("isAuthenticated() and (@securityUtils.isAdmin() or @securityUtils.isCurrentUser(#userId))")
+    ApiResponse<List<Stadium>> getOwnerStadiums(@PathVariable("userId") String userId) {
+        List<Stadium> stadiums = stadiumService.findByOwnerId(userId);
+        ApiResponse<List<Stadium>> apiResponse = new ApiResponse<>(stadiums);
         return apiResponse;
     }
 

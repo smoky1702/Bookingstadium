@@ -54,7 +54,7 @@ public class StadiumService {
                 .orElseThrow(()->new AppException(ErrorCode.STADIUM_NOT_EXISTED)));
     }
 
-    @PreAuthorize("hasAuthority('SCOPE_OWNER')")
+    @PreAuthorize("hasAnyAuthority('SCOPE_OWNER', 'SCOPE_ADMIN', 'ROLE_OWNER', 'ROLE_ADMIN')")
     public StadiumReponse updateStadium(String stadiumId, StadiumUpdateRequest request){
         Stadium stadium = stadiumRepository.findById(stadiumId)
                 .orElseThrow(()-> new AppException(ErrorCode.STADIUM_NOT_EXISTED));
@@ -116,6 +116,23 @@ public class StadiumService {
         }
 
         return stadiumBookings;
+    }
+    
+    /**
+     * Tìm tất cả stadium thuộc quyền sở hữu của owner theo user_id
+     */
+    public List<Stadium> findByOwnerId(String userId) {
+        // Tìm tất cả location thuộc quyền sở hữu của owner
+        List<Stadium_Location> locations = stadiumLocationRepository.findByUserId(userId);
+        
+        // Lấy tất cả stadium thuộc các location này
+        List<Stadium> stadiums = new ArrayList<>();
+        for (Stadium_Location location : locations) {
+            List<Stadium> locationStadiums = stadiumRepository.findByLocationId(location.getLocationId());
+            stadiums.addAll(locationStadiums);
+        }
+        
+        return stadiums;
     }
 }
 
